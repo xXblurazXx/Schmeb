@@ -102,7 +102,6 @@ a:hover {
     min-width: 14em;
     padding: 0.5em;
     text-align: center;
-    transform: rotate(-90deg);
     transition: transform 0.5s ease, color 0.3s ease;
     text-transform: uppercase;
     color: #ff568e;
@@ -110,7 +109,6 @@ a:hover {
 }
 
 .card p:hover span {
-    transform: rotate(0);
     color: #ff2a7b;
 }
 
