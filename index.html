@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="google-adsense-account" content="ca-pub-2314340578474791" />
     <title>Retro Games Directory</title>
 
     <script>
@@ -12,17 +11,11 @@
         autoplay: "on",
         splashScreen: false,
         unmuteOverlay: "hidden",
-        quality: "medium",
+        quality: "low",
         backgroundColor: "#000000",
       };
     </script>
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
-
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2314340578474791"
-      crossorigin="anonymous"
-    ></script>
 
     <style>
       * {
@@ -471,7 +464,7 @@
         gameContainer.appendChild(player);
         await player.ruffle().load(`./${fileName}`);
 
-        playerStatus.textContent = `Now playing: ${displayName} (Flash)`;
+        playerStatus.textContent = `Now playing: ${displayName}`;
       }
 
       function reloadCurrentGame() {
