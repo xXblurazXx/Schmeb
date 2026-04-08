@@ -6,8 +6,6 @@
     <meta name="google-adsense-account" content="ca-pub-2314340578474791" />
     <title>Retro Games Directory</title>
 
-    <link rel="stylesheet" type="text/css" href="style.css" />
-
     <script>
       window.RufflePlayer = window.RufflePlayer || {};
       window.RufflePlayer.config = {
@@ -27,7 +25,6 @@
     ></script>
 
     <style>
-      /* Reset and base styles */
       * {
         margin: 0;
         padding: 0;
@@ -82,7 +79,6 @@
         text-decoration: underline;
       }
 
-      /* Card container */
       .card {
         width: 100%;
         min-height: 254px;
@@ -92,16 +88,15 @@
         gap: 12px;
         padding: 1.2em;
         flex-wrap: wrap;
-        align-items: stretch;
+        align-items: flex-start;
         overflow-y: auto;
         box-sizing: border-box;
         scroll-behavior: smooth;
       }
 
-      /* Individual card items */
       .card p {
         flex: 1 1 140px;
-        min-height: 180px;
+        height: 100%;
         margin: 0;
         overflow: hidden;
         cursor: pointer;
@@ -112,10 +107,10 @@
         justify-content: center;
         align-items: center;
         transition:
-          flex 0.35s ease,
-          background-color 0.25s ease,
-          border-color 0.25s ease,
-          box-shadow 0.25s ease;
+          flex 0.5s ease,
+          background-color 0.3s ease,
+          border-color 0.3s ease,
+          box-shadow 0.3s ease;
         position: relative;
         user-select: none;
       }
@@ -128,17 +123,15 @@
         z-index: 10;
       }
 
-      /* Text inside card */
       .card p span {
         min-width: 14em;
-        padding: 0.75em;
+        padding: 0.5em;
         text-align: center;
         transform: rotate(0);
         transition: color 0.3s ease;
         text-transform: uppercase;
         color: #ff568e;
         letter-spacing: 0.1em;
-        line-height: 1.4;
       }
 
       .card p:hover span {
@@ -151,7 +144,6 @@
         box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #ff5a91;
       }
 
-      /* Player */
       #player-section {
         margin-top: 24px;
       }
@@ -221,7 +213,6 @@
         border: 0;
       }
 
-      /* Button styles */
       .btn-github {
         cursor: pointer;
         display: flex;
@@ -280,7 +271,6 @@
         .card p {
           flex: none;
           width: 100%;
-          min-height: 72px;
           margin-bottom: 12px;
           border-radius: 8px;
         }
@@ -354,9 +344,8 @@
       <br />
 
       <p>
-        Here you can find a collection of retro games you can launch directly in
-        the page. Flash titles use Ruffle, and Game Boy Advance titles use
-        EmulatorJS.
+        Here you can find a collection of retro games that you can play online.
+        Flash titles launch with Ruffle, and GBA titles launch with EmulatorJS.
       </p>
 
       <h2>Available Games</h2>
@@ -383,17 +372,17 @@
 
       <h2>About the Library</h2>
       <p>
-        Flash games were a huge part of early internet culture, and handheld
-        classics remain just as timeless. This page lets you browse both in one
-        place.
+        This collection is a fan-made effort to preserve classic web and retro
+        gaming in one place.
       </p>
       <p>
         <strong>Controls:</strong> Flash and GBA games each use their own input
-        systems. EmulatorJS exposes its own control menu once loaded.
+        systems. EmulatorJS exposes its own menu and control options after the
+        game loads.
       </p>
       <p>
-        <strong>Credits:</strong> This collection is a fan-made effort to help
-        preserve classic games. All rights remain with their respective owners.
+        <strong>Credits:</strong> All game rights remain with their respective
+        creators and owners.
       </p>
 
       <div class="center">
@@ -542,13 +531,10 @@
     EJS_player = "#game";
     EJS_core = "gba";
     EJS_gameUrl = ${JSON.stringify(gameUrl)};
-    EJS_pathtodata = "https://cdn.emulatorjs.org/<version>/data/";
+    EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
     EJS_startOnLoaded = true;
-
-    // Optional BIOS:
-    // EJS_biosUrl = "./bios/gba_bios.bin";
   <\/script>
-  <script src="./emulatorjs/data/loader.js"><\/script>
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"><\/script>
 </body>
 </html>`;
       }
