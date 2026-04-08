@@ -71,30 +71,17 @@ a:hover {
 
 /* Individual card items */
 .card p {
-    flex: 1 1 140px;
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    cursor: pointer;
-    border-radius: 6px;
-    background: #212121;
-    border: 1px solid #ff5a91;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: flex 0.5s ease, background-color 0.3s ease, border-color 0.3s ease,
-        box-shadow 0.3s ease;
-    position: relative;
-    user-select: none;
+    flex: 1 1 220px;
+    min-height: 120px;
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    will-change: transform;
 }
 
 .card p:hover {
-    flex: 5 1 320px;
+    transform: translateY(-4px) scale(1.02);
     background-color: #2e2e2e;
     border-color: #ff3377;
-    box-shadow: 0 0 15px 2px rgba(255, 85, 140, 0.8);
-    z-index: 10;
-    /* keep hovered card on top */
+    box-shadow: 0 0 12px 2px rgba(255, 85, 140, 0.5);
 }
 
 /* Text inside card */
