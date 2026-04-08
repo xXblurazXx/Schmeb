@@ -344,8 +344,7 @@
       <br />
 
       <p>
-        Here you can find a collection of retro games that you can play online.
-        Flash titles launch with Ruffle, and GBA titles launch with EmulatorJS.
+        Here you can find a collection of retro Flash games that you can play online.
       </p>
 
       <h2>Available Games</h2>
@@ -372,17 +371,13 @@
 
       <h2>About the Library</h2>
       <p>
-        This collection is a fan-made effort to preserve classic web and retro
-        gaming in one place.
+        This collection is a fan-made effort to preserve classic web gaming in one place.
       </p>
       <p>
-        <strong>Controls:</strong> Flash and GBA games each use their own input
-        systems. EmulatorJS exposes its own menu and control options after the
-        game loads.
+        <strong>Controls:</strong> Flash games use their own input systems through Ruffle.
       </p>
       <p>
-        <strong>Credits:</strong> All game rights remain with their respective
-        creators and owners.
+        <strong>Credits:</strong> All game rights remain with their respective creators and owners.
       </p>
 
       <div class="center">
@@ -428,20 +423,11 @@
           .join(" ");
       }
 
-      function escapeHtml(value) {
-        return String(value)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      }
-
       function clearPlayer() {
         document.getElementById("game-container").innerHTML = "";
       }
 
-      async function loadGame(fileName, displayName, type) {
+      async function loadGame(fileName, displayName) {
         const playerSection = document.getElementById("player-section");
         const playerTitle = document.getElementById("player-title");
         const playerStatus = document.getElementById("player-status");
@@ -454,17 +440,10 @@
         currentGame = {
           fileName,
           displayName,
-          type,
         };
 
         try {
-          if (type === "swf") {
-            await loadFlashGame(fileName, displayName);
-          } else if (type === "gba") {
-            loadGbaGame(fileName, displayName);
-          } else {
-            throw new Error(`Unsupported file type: ${type}`);
-          }
+          await loadFlashGame(fileName, displayName);
 
           playerSection.scrollIntoView({
             behavior: "smooth",
@@ -497,66 +476,9 @@
         playerStatus.textContent = `Now playing: ${displayName} (Flash)`;
       }
 
-      function buildGbaPlayerDocument(fileName, displayName) {
-  const baseHref = new URL("./", window.location.href).href;
-  const safeTitle = escapeHtml(displayName);
-  const gameUrl = `./${fileName}`;
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <base href="${baseHref}">
-  <title>${safeTitle}</title>
-  <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      overflow: hidden;
-    }
-    #game {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div id="game"></div>
-
-  <script>
-    EJS_player = "#game";
-    EJS_core = "gba";
-    EJS_gameUrl = ${JSON.stringify(gameUrl)};
-    EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
-    EJS_startOnLoaded = true;
-  <\/script>
-  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"><\/script>
-</body>
-</html>`;
-}
-
-      function loadGbaGame(fileName, displayName) {
-        const gameContainer = document.getElementById("game-container");
-        const playerStatus = document.getElementById("player-status");
-
-        const frame = document.createElement("iframe");
-        frame.setAttribute("title", displayName);
-        frame.setAttribute("allowfullscreen", "true");
-        frame.style.width = "100%";
-        frame.style.height = "100%";
-        frame.style.border = "0";
-        frame.srcdoc = buildGbaPlayerDocument(fileName, displayName);
-
-        gameContainer.appendChild(frame);
-        playerStatus.textContent = `Now playing: ${displayName} (GBA)`;
-      }
-
       function reloadCurrentGame() {
         if (!currentGame) return;
-        loadGame(currentGame.fileName, currentGame.displayName, currentGame.type);
+        loadGame(currentGame.fileName, currentGame.displayName);
       }
 
       function closePlayer() {
@@ -581,16 +503,14 @@
 
           const files = await response.json();
           const supportedFiles = files
-            .filter((file) => /\.(swf|gba)$/i.test(file.name))
+            .filter((file) => /\.swf$/i.test(file.name))
             .sort((a, b) => a.name.localeCompare(b.name));
 
           const container = document.getElementById("games-list");
           container.innerHTML = "";
 
           supportedFiles.forEach((file) => {
-            const extension = file.name.split(".").pop().toLowerCase();
             const displayName = toPascalCase(file.name);
-            const typeLabel = extension === "swf" ? "FLASH" : "GBA";
 
             const card = document.createElement("p");
             card.setAttribute("role", "button");
@@ -598,9 +518,9 @@
             card.setAttribute("aria-label", `Play ${displayName}`);
 
             const span = document.createElement("span");
-            span.textContent = `${displayName} [${typeLabel}]`;
+            span.textContent = `${displayName} [FLASH]`;
 
-            const openGame = () => loadGame(file.name, displayName, extension);
+            const openGame = () => loadGame(file.name, displayName);
 
             card.appendChild(span);
             card.addEventListener("click", openGame);
@@ -615,7 +535,7 @@
           });
 
           if (supportedFiles.length === 0) {
-            container.textContent = "No supported games found.";
+            container.textContent = "No Flash games found.";
           }
         } catch (error) {
           document.getElementById("games-list").textContent =
