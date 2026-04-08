@@ -94,34 +94,32 @@
         scroll-behavior: smooth;
       }
 
-      .card p {
-        flex: 1 1 140px;
-        height: 100%;
-        margin: 0;
-        overflow: hidden;
-        cursor: pointer;
-        border-radius: 6px;
-        background: #212121;
-        border: 1px solid #ff5a91;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition:
-          flex 0.5s ease,
-          background-color 0.3s ease,
-          border-color 0.3s ease,
-          box-shadow 0.3s ease;
-        position: relative;
-        user-select: none;
-      }
-
-      .card p:hover {
-        flex: 5 1 320px;
-        background-color: #2e2e2e;
-        border-color: #ff3377;
-        box-shadow: 0 0 15px 2px rgba(255, 85, 140, 0.8);
-        z-index: 10;
-      }
+     .card p {
+      flex: 1 1 140px;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      cursor: pointer;
+      border-radius: 6px;
+      background: #212121;
+      border: 1px solid #ff5a91;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition:
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+      position: relative;
+      user-select: none;
+    }
+    
+    .card p:hover {
+      background-color: #2e2e2e;
+      border-color: #ff3377;
+      box-shadow: 0 0 15px 2px rgba(255, 85, 140, 0.8);
+      z-index: 10;
+    }
 
       .card p span {
         min-width: 14em;
