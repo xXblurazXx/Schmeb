@@ -90,60 +90,62 @@
         min-height: 254px;
         border-radius: 4px;
         background: #212121;
-        display: flex;
-        gap: 12px;
         padding: 1.2em;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        overflow-y: auto;
         box-sizing: border-box;
         scroll-behavior: smooth;
       }
 
-     .card p {
-      flex: 1 1 140px;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      cursor: pointer;
-      border-radius: 6px;
-      background: #212121;
-      border: 1px solid #ff5a91;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition:
-        background-color 0.3s ease,
-        border-color 0.3s ease,
-        box-shadow 0.3s ease;
-      position: relative;
-      user-select: none;
-    }
-    
-    .card p:hover {
-      background-color: #2e2e2e;
-      border-color: #ff3377;
-      box-shadow: 0 0 15px 2px rgba(255, 85, 140, 0.8);
-      z-index: 10;
-    }
+      #games-list {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        align-items: stretch;
+      }
 
-      .card p span {
-        min-width: 14em;
-        padding: 0.5em;
+      #games-list p {
+        min-height: 90px;
+        margin: 0;
+        overflow: hidden;
+        cursor: pointer;
+        border-radius: 6px;
+        background: #212121;
+        border: 1px solid #ff5a91;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition:
+          background-color 0.3s ease,
+          border-color 0.3s ease,
+          box-shadow 0.3s ease;
+        position: relative;
+        user-select: none;
+      }
+
+      #games-list p:hover {
+        background-color: #2e2e2e;
+        border-color: #ff3377;
+        box-shadow: 0 0 15px 2px rgba(255, 85, 140, 0.8);
+        z-index: 10;
+      }
+
+      #games-list p span {
+        width: 100%;
+        padding: 0.75em;
         text-align: center;
         transform: rotate(0);
         transition: color 0.3s ease;
         text-transform: uppercase;
         color: #ff568e;
         letter-spacing: 0.1em;
+        word-break: break-word;
       }
 
-      .card p:hover span {
+      #games-list p:hover span {
         transform: rotate(0);
         color: #ff2a7b;
       }
 
-      .card p:focus {
+      #games-list p:focus {
         outline: none;
         box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #ff5a91;
       }
@@ -253,6 +255,12 @@
         gap: 1rem;
       }
 
+      @media (max-width: 1200px) {
+        #games-list {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+
       @media (max-width: 999px) {
         h1 {
           font-size: 2rem;
@@ -266,29 +274,8 @@
           font-size: 0.9rem;
         }
 
-        .card {
-          flex-direction: column;
-          min-height: auto;
-          height: auto;
-        }
-
-        .card p {
-          flex: none;
-          width: 100%;
-          margin-bottom: 12px;
-          border-radius: 8px;
-        }
-
-        .card p span {
-          transform: rotate(0);
-          min-width: auto;
-          padding: 0.75em;
-        }
-
-        .card p:hover {
-          flex: none;
-          background-color: #2e2e2e;
-          box-shadow: none;
+        #games-list {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
         #game-container {
@@ -297,6 +284,12 @@
 
         #player-toolbar {
           align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 700px) {
+        #games-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
 
@@ -317,25 +310,13 @@
           padding: 10px;
         }
 
-        .card {
-          flex-direction: column;
+        #games-list {
+          grid-template-columns: 1fr;
           gap: 10px;
         }
 
-        .card p {
-          flex: none;
-          width: 100%;
-          margin-bottom: 10px;
-        }
-
-        .card p span {
-          transform: rotate(0);
+        #games-list p span {
           font-size: 0.85rem;
-        }
-
-        .card p:hover {
-          flex: none;
-          box-shadow: none;
         }
       }
     </style>
