@@ -5,16 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Retro Games Directory</title>
 
-    <script>
-      window.RufflePlayer = window.RufflePlayer || {};
-      window.RufflePlayer.config = {
-        autoplay: "on",
-        splashScreen: false,
-        unmuteOverlay: "hidden",
-        quality: "low",
-        backgroundColor: "#000000",
-      };
-    </script>
+  <script>
+  window.RufflePlayer = window.RufflePlayer || {};
+  window.RufflePlayer.config = {
+    autoplay: "on",
+    splashScreen: false,
+    unmuteOverlay: "hidden",
+    quality: "low",
+    backgroundColor: "#000000",
+
+    contextMenu: "rightClickOnly",
+    showSwfDownload: false,
+    letterbox: "off",
+    upgradeToHttps: true,
+    compatibilityRules: true,
+    logLevel: "error",
+    scale: "showAll",
+    wmode: "opaque",
+    polyfills: true,
+    openUrlMode: "confirm",
+    allowNetworking: "internal",
+    scrollingBehavior: "smart"
+  };
+  </script>
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 
     <style>
