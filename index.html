@@ -16,11 +16,12 @@
 
         contextMenu: "rightClickOnly",
         showSwfDownload: false,
-        letterbox: "off",
         upgradeToHttps: true,
         compatibilityRules: true,
         logLevel: "error",
         scale: "showAll",
+        forceScale: true,
+        forceAlign: true,
         wmode: "opaque",
         polyfills: true,
         openUrlMode: "confirm",
@@ -420,6 +421,10 @@
       let currentGame = null;
       let currentViewportState = null;
 
+      const GAME_VIEWPORT_OVERRIDES = {
+        "Grow-Island.swf": { width: 640, height: 480 }
+      };
+
       function toPascalCase(filename) {
         const nameWithoutExt = filename.replace(/\.[^.]+$/i, "");
         return nameWithoutExt
@@ -587,8 +592,13 @@
         await api.load(`./${fileName}`);
 
         const metadata = await waitForMovieMetadata(api, player);
+        const override = GAME_VIEWPORT_OVERRIDES[fileName];
 
-        if (metadata) {
+        if (override) {
+          viewportState.setStageSize(override.width, override.height);
+          playerStatus.textContent =
+            `Now playing: ${displayName} • tuned viewport ${override.width}×${override.height}`;
+        } else if (metadata) {
           viewportState.setStageSize(metadata.width, metadata.height);
           playerStatus.textContent =
             `Now playing: ${displayName} • auto-detected viewport ${metadata.width}×${metadata.height}`;
