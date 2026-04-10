@@ -541,6 +541,8 @@
         const playerStatus = document.getElementById("player-status");
 
         playerSection.hidden = false;
+        playerTitle.textContent = displayName;
+        playerStatus.textContent = `Loading ${displayName}...`;
         clearPlayer();
 
         currentGame = {
@@ -588,8 +590,12 @@
 
         if (metadata) {
           viewportState.setStageSize(metadata.width, metadata.height);
+          playerStatus.textContent =
+            `Now playing: ${displayName} • auto-detected viewport ${metadata.width}×${metadata.height}`;
         } else {
           viewportState.setStageSize(4, 3);
+          playerStatus.textContent =
+            `Now playing: ${displayName} • stage size could not be detected, using fallback viewport`;
         }
       }
 
