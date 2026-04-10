@@ -5,29 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Retro Games Directory</title>
 
-  <script>
-  window.RufflePlayer = window.RufflePlayer || {};
-  window.RufflePlayer.config = {
-    autoplay: "on",
-    splashScreen: false,
-    unmuteOverlay: "hidden",
-    quality: "low",
-    backgroundColor: "#000000",
+    <script>
+      window.RufflePlayer = window.RufflePlayer || {};
+      window.RufflePlayer.config = {
+        autoplay: "on",
+        splashScreen: false,
+        unmuteOverlay: "hidden",
+        quality: "low",
+        backgroundColor: "#000000",
 
-    contextMenu: "rightClickOnly",
-    showSwfDownload: false,
-    letterbox: "off",
-    upgradeToHttps: true,
-    compatibilityRules: true,
-    logLevel: "error",
-    scale: "showAll",
-    wmode: "opaque",
-    polyfills: true,
-    openUrlMode: "confirm",
-    allowNetworking: "internal",
-    scrollingBehavior: "smart"
-  };
-  </script>
+        contextMenu: "rightClickOnly",
+        showSwfDownload: false,
+        letterbox: "off",
+        upgradeToHttps: true,
+        compatibilityRules: true,
+        logLevel: "error",
+        scale: "showAll",
+        wmode: "opaque",
+        polyfills: true,
+        openUrlMode: "confirm",
+        allowNetworking: "internal",
+        scrollingBehavior: "smart"
+      };
+    </script>
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 
     <style>
@@ -209,10 +209,29 @@
       #game-container {
         width: 100%;
         height: min(75vh, 900px);
+        min-height: 420px;
+        background: #000;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #game-stage-shell {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
         background: #000;
       }
 
-      #game-container > * {
+      #game-stage-viewport {
+        position: relative;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #game-stage-viewport > * {
         width: 100%;
         height: 100%;
         display: block;
@@ -280,6 +299,7 @@
 
         #game-container {
           height: 60vh;
+          min-height: 360px;
         }
 
         #player-toolbar {
@@ -398,6 +418,7 @@
       document.getElementById("year").textContent = new Date().getFullYear();
 
       let currentGame = null;
+      let currentViewportState = null;
 
       function toPascalCase(filename) {
         const nameWithoutExt = filename.replace(/\.[^.]+$/i, "");
@@ -409,7 +430,109 @@
       }
 
       function clearPlayer() {
+        if (currentViewportState && typeof currentViewportState.cleanup === "function") {
+          currentViewportState.cleanup();
+        }
+
+        currentViewportState = null;
         document.getElementById("game-container").innerHTML = "";
+      }
+
+      function createGameViewport() {
+        const gameContainer = document.getElementById("game-container");
+
+        const shell = document.createElement("div");
+        shell.id = "game-stage-shell";
+
+        const viewport = document.createElement("div");
+        viewport.id = "game-stage-viewport";
+        viewport.style.visibility = "hidden";
+
+        shell.appendChild(viewport);
+        gameContainer.appendChild(shell);
+
+        let stageWidth = 4;
+        let stageHeight = 3;
+        let rafId = null;
+
+        const updateViewportSize = () => {
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+          }
+
+          rafId = requestAnimationFrame(() => {
+            const containerWidth = shell.clientWidth;
+            const containerHeight = shell.clientHeight;
+
+            if (!containerWidth || !containerHeight || !stageWidth || !stageHeight) {
+              return;
+            }
+
+            const aspectRatio = stageWidth / stageHeight;
+
+            let viewportWidth = containerWidth;
+            let viewportHeight = viewportWidth / aspectRatio;
+
+            if (viewportHeight > containerHeight) {
+              viewportHeight = containerHeight;
+              viewportWidth = viewportHeight * aspectRatio;
+            }
+
+            viewport.style.width = `${Math.round(viewportWidth)}px`;
+            viewport.style.height = `${Math.round(viewportHeight)}px`;
+          });
+        };
+
+        const setStageSize = (width, height) => {
+          if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+            stageWidth = width;
+            stageHeight = height;
+          }
+
+          updateViewportSize();
+          viewport.style.visibility = "visible";
+        };
+
+        const resizeObserver = new ResizeObserver(updateViewportSize);
+        resizeObserver.observe(shell);
+        window.addEventListener("resize", updateViewportSize);
+
+        updateViewportSize();
+
+        return {
+          viewport,
+          setStageSize,
+          cleanup() {
+            resizeObserver.disconnect();
+            window.removeEventListener("resize", updateViewportSize);
+
+            if (rafId !== null) {
+              cancelAnimationFrame(rafId);
+            }
+          }
+        };
+      }
+
+      async function waitForMovieMetadata(api, player, timeoutMs = 3000) {
+        const startTime = performance.now();
+
+        while (performance.now() - startTime < timeoutMs) {
+          const metadata = api.metadata || player.metadata || null;
+
+          if (
+            metadata &&
+            Number.isFinite(metadata.width) &&
+            Number.isFinite(metadata.height) &&
+            metadata.width > 0 &&
+            metadata.height > 0
+          ) {
+            return metadata;
+          }
+
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+
+        return null;
       }
 
       async function loadGame(fileName, displayName) {
@@ -424,7 +547,7 @@
 
         currentGame = {
           fileName,
-          displayName,
+          displayName
         };
 
         try {
@@ -432,7 +555,7 @@
 
           playerSection.scrollIntoView({
             behavior: "smooth",
-            block: "start",
+            block: "start"
           });
         } catch (error) {
           console.error(error);
@@ -441,7 +564,6 @@
       }
 
       async function loadFlashGame(fileName, displayName) {
-        const gameContainer = document.getElementById("game-container");
         const playerStatus = document.getElementById("player-status");
 
         if (!window.RufflePlayer || !window.RufflePlayer.newest) {
@@ -449,16 +571,32 @@
           return;
         }
 
+        const viewportState = createGameViewport();
+        currentViewportState = viewportState;
+
         const ruffle = window.RufflePlayer.newest();
         const player = ruffle.createPlayer();
 
         player.style.width = "100%";
         player.style.height = "100%";
+        player.style.display = "block";
 
-        gameContainer.appendChild(player);
-        await player.ruffle().load(`./${fileName}`);
+        viewportState.viewport.appendChild(player);
 
-        playerStatus.textContent = `Now playing: ${displayName}`;
+        const api = player.ruffle();
+        await api.load(`./${fileName}`);
+
+        const metadata = await waitForMovieMetadata(api, player);
+
+        if (metadata) {
+          viewportState.setStageSize(metadata.width, metadata.height);
+          playerStatus.textContent =
+            `Now playing: ${displayName} • auto-detected viewport ${metadata.width}×${metadata.height}`;
+        } else {
+          viewportState.setStageSize(4, 3);
+          playerStatus.textContent =
+            `Now playing: ${displayName} • stage size could not be detected, using fallback viewport`;
+        }
       }
 
       function reloadCurrentGame() {
@@ -503,7 +641,7 @@
             card.setAttribute("aria-label", `Play ${displayName}`);
 
             const span = document.createElement("span");
-            span.textContent = `${displayName}`;
+            span.textContent = displayName;
 
             const openGame = () => loadGame(file.name, displayName);
 
