@@ -591,11 +591,11 @@
         if (metadata) {
           viewportState.setStageSize(metadata.width, metadata.height);
           playerStatus.textContent =
-            `Now playing: ${displayName} • auto-detected viewport ${metadata.width}×${metadata.height}`;
+            `Now playing: ${displayName}`;
         } else {
           viewportState.setStageSize(4, 3);
           playerStatus.textContent =
-            `Now playing: ${displayName} • stage size could not be detected, using fallback viewport`;
+            `Now playing: ${displayName}`;
         }
       }
 
