@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Retro Games Directory</title>
+    <title>Aaron's Game Directory</title>
 
     <script>
       window.RufflePlayer = window.RufflePlayer || {};
@@ -361,7 +361,7 @@
 
   <body>
     <div id="container">
-      <h1>Retro Games Directory</h1>
+      <h1>Games Directory</h1>
 
       <br />
 
@@ -601,7 +601,7 @@
         viewportState.viewport.appendChild(player);
 
         const api = player.ruffle();
-        await api.load(`./${fileName}`);
+        await api.load(`https://raw.githubusercontent.com/xxblurazxx/Schmeb/main/flash/${fileName}`);
 
         const metadata = await waitForMovieMetadata(api, player);
 
@@ -635,7 +635,7 @@
         const repoName = "Schmeb";
         const path = "";
 
-        const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
+        const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/flash/${path}`;
 
         try {
           const response = await fetch(apiUrl);
