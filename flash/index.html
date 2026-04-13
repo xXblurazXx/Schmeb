@@ -1041,7 +1041,7 @@
         viewportState.viewport.appendChild(player);
 
         const api = player.ruffle();
-        await api.load(`https://raw.githubusercontent.com/xxblurazxx/Schmeb/main/flash/${fileName}`);
+        await api.load(fileName);
 
         const metadata = await waitForMovieMetadata(api, player);
 
