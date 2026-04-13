@@ -52,11 +52,29 @@
         --accent-dark: #2da79e;
         --accent-soft: rgba(57, 197, 187, 0.35);
         --border-dark: #5a5a5a;
-        --black: #000000;
+        --button-contrast: #103533;
         --white: #ffffff;
         --sidebar-width: 300px;
         --sidebar-peek: 44px;
-        --page-gap: 20px;
+      }
+
+      body.teto-mode {
+        --bg-main: #2a2433;
+        --bg-panel: #854462;
+        --bg-card: #9e8ba4;
+        --bg-card-hover: #a295a7;
+        --bg-toolbar: #854462;
+        --bg-player-shell: #2a2433;
+        --bg-sidebar: #2a2433;
+        --bg-sidebar-item: #854462;
+        --bg-sidebar-item-hover: #a295a7;
+        --text-main: #f4dfde;
+        --text-muted: #e5d5db;
+        --accent: #d46a83;
+        --accent-dark: #854462;
+        --accent-soft: rgba(212, 106, 131, 0.35);
+        --border-dark: #a295a7;
+        --button-contrast: #2a2433;
       }
 
       html {
@@ -69,7 +87,36 @@
         line-height: 1.6;
         background-color: var(--bg-main);
         color: var(--text-main);
-        margin: 0;
+        min-height: 100vh;
+      }
+
+      #theme-toggle {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1200;
+        border: 1px solid var(--accent);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 0.75rem 1rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition:
+          background 0.2s ease,
+          color 0.2s ease,
+          border-color 0.2s ease,
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.05),
+          0 6px 14px rgba(0, 0, 0, 0.2);
+      }
+
+      #theme-toggle:hover {
+        background: var(--accent);
+        color: var(--button-contrast);
+        transform: translateY(-1px);
       }
 
       #sidebar {
@@ -82,7 +129,7 @@
         border-right: 1px solid var(--border-dark);
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 18px 14px 20px;
+        padding: 64px 14px 20px;
         z-index: 1000;
         transition: transform 0.28s ease;
       }
@@ -98,7 +145,7 @@
         width: 34px;
         height: 34px;
         border: 1px solid var(--accent);
-        background: rgba(57, 197, 187, 0.12);
+        background: rgba(255, 255, 255, 0.06);
         color: var(--accent);
         border-radius: 999px;
         cursor: pointer;
@@ -117,7 +164,7 @@
 
       #sidebar-toggle:hover {
         background: var(--accent);
-        color: #103533;
+        color: var(--button-contrast);
         transform: scale(1.05);
       }
 
@@ -142,17 +189,18 @@
         padding: 10px 12px;
         border-radius: 8px;
         border: 1px solid var(--border-dark);
-        background: #1b1b1b;
-        color: var(--white);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text-main);
         outline: none;
         transition:
           border-color 0.2s ease,
-          box-shadow 0.2s ease;
+          box-shadow 0.2s ease,
+          background 0.2s ease;
       }
 
       #sidebar-search:focus {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(57, 197, 187, 0.18);
+        box-shadow: 0 0 0 3px var(--accent-soft);
       }
 
       #search-results-text {
@@ -180,12 +228,12 @@
         letter-spacing: 0.16em;
         text-transform: uppercase;
         padding-bottom: 6px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
       }
 
       .sidebar-game-btn {
         width: 100%;
-        border: 1px solid rgba(57, 197, 187, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         background: var(--bg-sidebar-item);
         color: var(--text-main);
         text-align: left;
@@ -204,29 +252,24 @@
         background: var(--bg-sidebar-item-hover);
         border-color: var(--accent);
         color: var(--white);
-        box-shadow: 0 0 10px rgba(57, 197, 187, 0.15);
+        box-shadow: 0 0 10px var(--accent-soft);
         outline: none;
       }
 
       .sidebar-game-btn.active {
-        background: rgba(57, 197, 187, 0.12);
+        background: color-mix(in srgb, var(--accent) 16%, var(--bg-sidebar-item));
         border-color: var(--accent);
         color: var(--white);
-        box-shadow: 0 0 0 1px rgba(57, 197, 187, 0.2);
+        box-shadow: 0 0 0 1px var(--accent-soft);
       }
 
       #main-content {
-        margin-left: calc(var(--sidebar-width) + var(--page-gap));
-        padding: 20px;
-        transition: margin-left 0.28s ease;
-      }
-
-      body.sidebar-collapsed #main-content {
-        margin-left: calc(var(--sidebar-peek) + var(--page-gap));
+        width: 100%;
+        padding: 20px 20px 40px;
       }
 
       #container {
-        max-width: 1500px;
+        width: min(1500px, calc(100vw - 40px));
         margin: 0 auto;
         padding: 20px;
         background-color: var(--bg-panel);
@@ -344,9 +387,9 @@
       }
 
       .game-card.active {
-        background-color: rgba(57, 197, 187, 0.12);
-        border-color: #7ee7df;
-        box-shadow: 0 0 0 2px rgba(126, 231, 223, 0.22);
+        background-color: color-mix(in srgb, var(--accent) 14%, var(--bg-card));
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-soft);
       }
 
       .game-card span {
@@ -362,7 +405,7 @@
 
       .game-card:hover span,
       .game-card.active span {
-        color: #7ee7df;
+        color: var(--white);
       }
 
       .game-card:focus {
@@ -400,7 +443,7 @@
 
       #player-status {
         margin: 0;
-        color: #e0e0e0;
+        color: var(--text-main);
         font-size: 0.95rem;
       }
 
@@ -423,7 +466,7 @@
 
       #player-actions button:hover {
         background: var(--accent);
-        color: #103533;
+        color: var(--button-contrast);
       }
 
       #game-container {
@@ -480,7 +523,7 @@
       .btn-github:hover {
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.08),
-          inset 0 0 0 1px rgba(57, 197, 187, 0.15);
+          inset 0 0 0 1px var(--accent-soft);
         color: var(--white);
         transform: translateY(-0.25rem);
         background-color: rgba(0, 0, 0, 0.28);
@@ -549,10 +592,11 @@
         }
 
         #main-content {
-          padding: 14px;
+          padding: 14px 14px 30px;
         }
 
         #container {
+          width: calc(100vw - 28px);
           padding: 14px;
         }
 
@@ -581,10 +625,11 @@
         }
 
         #main-content {
-          padding: 10px;
+          padding: 10px 10px 24px;
         }
 
         #container {
+          width: calc(100vw - 20px);
           padding: 10px;
         }
 
@@ -605,11 +650,25 @@
           font-size: 0.84rem;
           padding: 8px 9px;
         }
+
+        #theme-toggle {
+          padding: 0.65rem 0.9rem;
+          font-size: 0.9rem;
+        }
       }
     </style>
   </head>
 
   <body>
+    <button
+      id="theme-toggle"
+      type="button"
+      aria-pressed="false"
+      title="Switch to Teto Mode"
+    >
+      Teto Mode
+    </button>
+
     <aside id="sidebar">
       <button
         id="sidebar-toggle"
@@ -719,6 +778,9 @@
       let currentViewportState = null;
       let allGameEntries = [];
       let currentSearchTerm = "";
+
+      const THEME_STORAGE_KEY = "schmeb-theme";
+      const SIDEBAR_STORAGE_KEY = "schmeb-sidebar-collapsed";
 
       function toPascalCase(filename) {
         const nameWithoutExt = filename.replace(/\.[^.]+$/i, "");
@@ -1079,6 +1141,15 @@
 
       function setupSidebarToggle() {
         const toggleButton = document.getElementById("sidebar-toggle");
+        const savedState = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+
+        if (savedState === "collapsed") {
+          document.body.classList.add("sidebar-collapsed");
+          toggleButton.textContent = "▶";
+          toggleButton.setAttribute("aria-expanded", "false");
+          toggleButton.setAttribute("aria-label", "Expand sidebar");
+          toggleButton.title = "Expand sidebar";
+        }
 
         toggleButton.addEventListener("click", () => {
           const collapsed = document.body.classList.toggle("sidebar-collapsed");
@@ -1089,6 +1160,35 @@
             collapsed ? "Expand sidebar" : "Collapse sidebar"
           );
           toggleButton.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+
+          localStorage.setItem(
+            SIDEBAR_STORAGE_KEY,
+            collapsed ? "collapsed" : "expanded"
+          );
+        });
+      }
+
+      function applyTheme(theme) {
+        const themeToggle = document.getElementById("theme-toggle");
+        const isTeto = theme === "teto";
+
+        document.body.classList.toggle("teto-mode", isTeto);
+        themeToggle.textContent = isTeto ? "Miku Mode" : "Teto Mode";
+        themeToggle.setAttribute("aria-pressed", String(isTeto));
+        themeToggle.title = isTeto ? "Switch to Miku Mode" : "Switch to Teto Mode";
+
+        localStorage.setItem(THEME_STORAGE_KEY, isTeto ? "teto" : "miku");
+      }
+
+      function setupThemeToggle() {
+        const themeToggle = document.getElementById("theme-toggle");
+        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+
+        applyTheme(savedTheme === "teto" ? "teto" : "miku");
+
+        themeToggle.addEventListener("click", () => {
+          const isTeto = document.body.classList.contains("teto-mode");
+          applyTheme(isTeto ? "miku" : "teto");
         });
       }
 
@@ -1126,6 +1226,7 @@
 
       setupSearch();
       setupSidebarToggle();
+      setupThemeToggle();
       fetchGames();
     </script>
   </body>
