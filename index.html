@@ -154,7 +154,7 @@
       }
 
       body.sidebar-collapsed #sidebar {
-        transform: translateX(calc(-1 * (var(--sidebar-width) - var(--sidebar-peek))));
+        transform: translateX(-100%);
       }
 
       #sidebar-toggle {
@@ -185,7 +185,7 @@
       }
 
       body.sidebar-collapsed #sidebar-toggle {
-        left: calc(var(--sidebar-peek) + var(--sidebar-toggle-gap));
+        left: var(--sidebar-toggle-gap);
       }
 
       #sidebar-toggle:hover {
