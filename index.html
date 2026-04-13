@@ -62,7 +62,7 @@
         --scrollbar-thumb-hover: rgba(57, 197, 187, 0.9);
       }
 
-      body.teto-mode {
+      html.teto-mode {
         --accent: #f07f9f;
         --accent-dark: #d46a83;
         --accent-soft: rgba(240, 127, 159, 0.35);
@@ -1233,7 +1233,7 @@
         const themeToggle = document.getElementById("theme-toggle");
         const isTeto = theme === "teto";
 
-        document.body.classList.toggle("teto-mode", isTeto);
+        document.documentElement.classList.toggle("teto-mode", isTeto);
         themeToggle.textContent = isTeto ? "Teto Mode" : "Miku Mode";
         themeToggle.setAttribute("aria-pressed", String(isTeto));
         themeToggle.title = isTeto ? "Current theme: Teto Mode" : "Current theme: Miku Mode";
@@ -1248,7 +1248,7 @@
         applyTheme(savedTheme === "teto" ? "teto" : "miku");
 
         themeToggle.addEventListener("click", () => {
-          const isTeto = document.body.classList.contains("teto-mode");
+          const isTeto = document.documentElement.classList.contains("teto-mode");
           applyTheme(isTeto ? "miku" : "teto");
         });
       }
