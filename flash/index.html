@@ -968,13 +968,14 @@
         };
       }
 
-      async function waitForMovieMetadata(api, player, timeoutMs = 3000) {
+      async function waitForMovieMetadata(api, timeoutMs = 10000) {
         const startTime = performance.now();
-
+      
         while (performance.now() - startTime < timeoutMs) {
-          const metadata = api.metadata || player.metadata || null;
-
+          const metadata = api.metadata;
+      
           if (
+            api.readyState >= 1 &&
             metadata &&
             Number.isFinite(metadata.width) &&
             Number.isFinite(metadata.height) &&
@@ -983,10 +984,10 @@
           ) {
             return metadata;
           }
-
+      
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
-
+      
         return null;
       }
 
@@ -1022,37 +1023,44 @@
 
       async function loadFlashGame(fileName, displayName) {
         const playerStatus = document.getElementById("player-status");
-
+      
         if (!window.RufflePlayer || !window.RufflePlayer.newest) {
           playerStatus.textContent = "Ruffle failed to load.";
           return;
         }
-
+      
         const viewportState = createGameViewport();
         currentViewportState = viewportState;
-
+      
         const ruffle = window.RufflePlayer.newest();
         const player = ruffle.createPlayer();
-
+      
         player.style.width = "100%";
         player.style.height = "100%";
         player.style.display = "block";
-
+      
         viewportState.viewport.appendChild(player);
-
+      
         const api = player.ruffle();
         await api.load(fileName);
-
-        const metadata = await waitForMovieMetadata(api, player);
-
-        if (metadata) {
-          viewportState.setStageSize(metadata.width, metadata.height);
+      
+        // Optional manual fixes for games whose real play area
+        // does not match the SWF header size.
+        const viewportOverrides = {
+          // "Grow-Island.swf": { width: 640, height: 480 },
+        };
+      
+        const detected = viewportOverrides[fileName] || await waitForMovieMetadata(api, 10000);
+        const stage = detected || { width: 4, height: 3 };
+      
+        viewportState.setStageSize(stage.width, stage.height);
+      
+        if (detected) {
           playerStatus.textContent =
-            `Now playing: ${displayName} • auto-detected viewport ${metadata.width}×${metadata.height}`;
+            `Now playing: ${displayName} • viewport ${stage.width}×${stage.height}`;
         } else {
-          viewportState.setStageSize(4, 3);
           playerStatus.textContent =
-            `Now playing: ${displayName} • stage size could not be detected, using fallback viewport`;
+            `Now playing: ${displayName} • using fallback viewport`;
         }
       }
 
