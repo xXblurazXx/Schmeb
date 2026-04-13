@@ -990,7 +990,6 @@
       
         return null;
       }
-
       async function loadGame(fileName, displayName) {
         const playerSection = document.getElementById("player-section");
         const playerTitle = document.getElementById("player-title");
@@ -1044,29 +1043,23 @@
         const api = player.ruffle();
         await api.load(fileName);
       
-        // Optional manual fixes for games whose real play area
-        // does not match the SWF header size.
-        const viewportOverrides = {
-          // "Grow-Island.swf": { width: 640, height: 480 },
-        };
+        const metadata = await waitForMovieMetadata(api, 10000);
+        const movieBg = metadata?.backgroundColor || "#ffffff";
       
-        const detected = viewportOverrides[fileName] || await waitForMovieMetadata(api, 10000);
-        const stage = detected || { width: 4, height: 3 };
+        viewportState.viewport.style.backgroundColor = movieBg;
+        player.style.backgroundColor = movieBg;
       
-        viewportState.setStageSize(stage.width, stage.height);
-      
-        if (detected) {
+        if (metadata) {
+          viewportState.setStageSize(metadata.width, metadata.height);
           playerStatus.textContent =
-            `Now playing: ${displayName} • viewport ${stage.width}×${stage.height}`;
+            `Now playing: ${displayName} • ${metadata.width}×${metadata.height} • bg ${movieBg}`;
         } else {
+          viewportState.setStageSize(4, 3);
+          viewportState.viewport.style.backgroundColor = "#ffffff";
+          player.style.backgroundColor = "#ffffff";
           playerStatus.textContent =
-            `Now playing: ${displayName} • using fallback viewport`;
+            `Now playing: ${displayName} • using fallback viewport • bg #ffffff`;
         }
-      }
-
-      function reloadCurrentGame() {
-        if (!currentGame) return;
-        loadGame(currentGame.fileName, currentGame.displayName);
       }
 
       function closePlayer() {
