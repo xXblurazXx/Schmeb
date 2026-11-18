@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Aaron's Game Directory</title>
+
+    <!-- Inline favicon: stops the browser firing a 404 request for /favicon.ico on every load. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2339c5bb'/%3E%3Cpath d='M4 6h8v4H4z' fill='%23103533'/%3E%3C/svg%3E"
+    />
+
+    <link rel="preconnect" href="https://unpkg.com" crossorigin />
+    <link rel="preconnect" href="https://api.github.com" crossorigin />
+
+    <script>
+      /* ------------------------------------------------------------------
+       * Ruffle configuration
+       * ------------------------------------------------------------------
+       * Must be assigned BEFORE the Ruffle script runs. We mutate parts of
+       * it later (quality / preferredRenderer) when the user changes the
+       * performance controls; Ruffle reads config at player-load time, so
+       * changing it and reloading the game is enough to apply it.
+       * ---------------------------------------------------------------- */
+      window.RufflePlayer = window.RufflePlayer || {};
+      window.RufflePlayer.config = {
+        autoplay: "on",
+        splashScreen: false,
+        unmuteOverlay: "hidden",
+        quality: "low",
+        backgroundColor: "#ffffff",
+        contextMenu: "rightClickOnly",
+        showSwfDownload: false,
+        letterbox: "off",
+        upgradeToHttps: true,
+        compatibilityRules: true,
+        logLevel: "error",
+        scale: "showAll",
+        wmode: "opaque",
+        // We build every player by hand via createPlayer(), so Ruffle does
+        // not need to scan the document for <object>/<embed> tags to
+        // replace. Turning this off skips that DOM sweep on every load.
+        polyfills: false,
+        openUrlMode: "confirm",
+        allowNetworking: "internal",
+        scrollingBehavior: "smart"
+        // preferredRenderer is deliberately left unset so Ruffle picks the
+        // best backend it can find. The toolbar lets you pin it to "canvas"
+        // or "webgl" to compare — see RENDERER NOTE in the script below.
+      };
+    </script>
+
+    <!--
+      Ruffle is loaded dynamically by the script at the end of <body>, from
+      the first source in RUFFLE_SOURCES that works. That lets you drop a
+      self-hosted build into flash/ruffle/ and have it used automatically,
+      with the CDN as a fallback. See SELF-HOSTING in the script below.
+    -->
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg-main: #2b2b2b;
+        --bg-panel: #3a3a3a;
+        --bg-card: #454545;
+        --bg-card-hover: #505050;
+        --bg-toolbar: #404040;
+        --bg-player-shell: #404040;
+        --bg-sidebar: #232323;
+        --bg-sidebar-item: #303030;
+        --bg-sidebar-item-hover: #3a3a3a;
+        --text-main: #f2f2f2;
+        --text-muted: #d0d0d0;
+        --accent: #39c5bb;
+        --accent-dark: #2da79e;
+        --accent-soft: rgba(57, 197, 187, 0.35);
+        --border-dark: #5a5a5a;
+        --button-contrast: #103533;
+        --white: #ffffff;
+        --warn: #f5c267;
+        --sidebar-width: 300px;
+        --sidebar-toggle-gap: 10px;
+        --scrollbar-track: rgba(255, 255, 255, 0.05);
+        --scrollbar-thumb: rgba(57, 197, 187, 0.65);
+        --scrollbar-thumb-hover: rgba(57, 197, 187, 0.9);
+        --speed: 0.22s;
+      }
+
+      html.teto-mode {
+        --accent: #f07f9f;
+        --accent-dark: #d46a83;
+        --accent-soft: rgba(240, 127, 159, 0.35);
+        --button-contrast: #2a2433;
+        --scrollbar-track: rgba(255, 255, 255, 0.06);
+        --scrollbar-thumb: rgba(240, 127, 159, 0.72);
+        --scrollbar-thumb-hover: rgba(240, 127, 159, 0.95);
+      }
+
+      /* Low-power mode: kills the glow/shadow repaints and animations that
+         cost real CPU when the browser is software-rendering (i.e. a VDI
+         with no GPU). Toggled from the header button. */
+      html.low-power {
+        --speed: 0s;
+      }
+
+      html.low-power *,
+      html.low-power *::before,
+      html.low-power *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+
+      html.low-power .game-card:hover,
+      html.low-power .sidebar-game-btn:hover,
+      html.low-power .btn-github:hover,
+      html.low-power #theme-toggle,
+      html.low-power .btn-github {
+        box-shadow: none !important;
+      }
+
+      html.low-power {
+        scroll-behavior: auto;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+      }
+
+      html::-webkit-scrollbar {
+        width: 14px;
+      }
+
+      html::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+      }
+
+      html::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 999px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+
+      html::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover);
+      }
+
+      body {
+        font-family: "Roboto", "Segoe UI", system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        min-height: 100vh;
+      }
+
+      /* ---------------------------------------------------------------
+       * Header controls
+       * ------------------------------------------------------------- */
+
+      #header-controls {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 1200;
+        display: flex;
+        gap: 8px;
+      }
+
+      #header-controls button {
+        border: 1px solid var(--accent);
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 0.6rem 0.95rem;
+        font-weight: 800;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition:
+          background-color var(--speed) ease,
+          color var(--speed) ease,
+          border-color var(--speed) ease;
+      }
+
+      #header-controls button:hover {
+        background: var(--accent);
+        color: var(--button-contrast);
+      }
+
+      #header-controls button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--button-contrast);
+      }
+
+      #header-controls button:focus-visible {
+        outline: 2px solid var(--white);
+        outline-offset: 2px;
+      }
+
+      /* ---------------------------------------------------------------
+       * Sidebar
+       * ------------------------------------------------------------- */
+
+      #sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--sidebar-width);
+        height: 100vh;
+        background: var(--bg-sidebar);
+        border-right: 1px solid var(--border-dark);
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 64px 14px 20px;
+        z-index: 1000;
+        transition: transform var(--speed) ease;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        overscroll-behavior: contain;
+        /* Promotes the panel so sliding it doesn't repaint the page behind. */
+        contain: layout paint;
+      }
+
+      #sidebar::-webkit-scrollbar {
+        width: 12px;
+      }
+
+      #sidebar::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+      }
+
+      #sidebar::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 999px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+
+      #sidebar::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover);
+      }
+
+      body.sidebar-collapsed #sidebar {
+        transform: translateX(-100%);
+      }
+
+      #sidebar-toggle {
+        position: fixed;
+        top: 82px;
+        left: calc(var(--sidebar-width) + var(--sidebar-toggle-gap));
+        width: 38px;
+        height: 38px;
+        border: 1px solid var(--accent);
+        background: rgba(40, 40, 40, 0.92);
+        color: var(--accent);
+        border-radius: 999px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        font-weight: bold;
+        transition:
+          background-color var(--speed) ease,
+          color var(--speed) ease,
+          transform var(--speed) ease,
+          left var(--speed) ease;
+        z-index: 1100;
+      }
+
+      body.sidebar-collapsed #sidebar-toggle {
+        left: var(--sidebar-toggle-gap);
+      }
+
+      #sidebar-toggle:hover {
+        background: var(--accent);
+        color: var(--button-contrast);
+        transform: scale(1.05);
+      }
+
+      #sidebar-toggle:focus-visible {
+        outline: 2px solid var(--white);
+        outline-offset: 2px;
+      }
+
+      #sidebar h2 {
+        font-size: 1.35rem;
+        color: var(--white);
+        margin: 10px 0 6px 0;
+      }
+
+      #sidebar .sidebar-subtitle {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+      }
+
+      #sidebar-search-wrap {
+        margin-bottom: 14px;
+      }
+
+      #sidebar-search {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-dark);
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--text-main);
+        outline: none;
+        transition:
+          border-color var(--speed) ease,
+          box-shadow var(--speed) ease;
+      }
+
+      #sidebar-search:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+
+      #search-results-text {
+        margin-top: 8px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+      }
+
+      #sidebar-games {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .sidebar-letter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sidebar-letter-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .sidebar-game-btn {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--bg-sidebar-item);
+        color: var(--text-main);
+        text-align: left;
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.95rem;
+        transition:
+          background-color var(--speed) ease,
+          border-color var(--speed) ease,
+          color var(--speed) ease;
+      }
+
+      .sidebar-game-btn:hover,
+      .sidebar-game-btn:focus-visible {
+        background: var(--bg-sidebar-item-hover);
+        border-color: var(--accent);
+        color: var(--white);
+        box-shadow: 0 0 10px var(--accent-soft);
+        outline: none;
+      }
+
+      .sidebar-game-btn.active {
+        background: color-mix(in srgb, var(--accent) 16%, var(--bg-sidebar-item));
+        border-color: var(--accent);
+        color: var(--white);
+      }
+
+      /* ---------------------------------------------------------------
+       * Main layout
+       * ------------------------------------------------------------- */
+
+      #main-content {
+        /* The sidebar is position:fixed, so without this margin it sat on
+           top of the left edge of the content panel. */
+        margin-left: var(--sidebar-width);
+        padding: 20px 20px 40px;
+        transition: margin-left var(--speed) ease;
+      }
+
+      body.sidebar-collapsed #main-content {
+        margin-left: 0;
+      }
+
+      #container {
+        width: min(1500px, 100%);
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--bg-panel);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        border-radius: 8px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 20px;
+        color: var(--white);
+      }
+
+      h2 {
+        font-size: 1.8rem;
+        color: var(--accent);
+        margin-top: 30px;
+      }
+
+      p {
+        margin-bottom: 20px;
+        color: var(--text-muted);
+        line-height: 1.8;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: var(--white);
+        text-decoration: underline;
+      }
+
+      .card {
+        width: 100%;
+        border-radius: 4px;
+        background: var(--bg-card);
+        padding: 1.2em;
+      }
+
+      #games-list {
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+      }
+
+      .letter-section {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        /* Lets the browser skip layout + paint for sections scrolled out of
+           view. On a long library this is the single biggest scrolling win. */
+        content-visibility: auto;
+        contain-intrinsic-size: auto 220px;
+      }
+
+      .letter-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .letter-divider::before,
+      .letter-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .letter-label {
+        color: var(--accent);
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 0.95rem;
+        white-space: nowrap;
+      }
+
+      .games-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .game-card {
+        min-height: 90px;
+        overflow: hidden;
+        cursor: pointer;
+        border-radius: 6px;
+        background: var(--bg-card);
+        border: 1px solid var(--accent);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font: inherit;
+        transition:
+          background-color var(--speed) ease,
+          border-color var(--speed) ease;
+        user-select: none;
+        padding: 0;
+      }
+
+      .game-card:hover {
+        background-color: var(--bg-card-hover);
+        border-color: var(--accent-dark);
+        box-shadow: 0 0 15px 2px var(--accent-soft);
+      }
+
+      .game-card.active {
+        background-color: color-mix(in srgb, var(--accent) 14%, var(--bg-card));
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-soft);
+      }
+
+      .game-card span {
+        width: 100%;
+        padding: 0.75em;
+        text-align: center;
+        text-transform: uppercase;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        word-break: break-word;
+        transition: color var(--speed) ease;
+      }
+
+      .game-card:hover span,
+      .game-card.active span {
+        color: var(--white);
+      }
+
+      .game-card:focus-visible {
+        outline: none;
+        box-shadow:
+          0 0 0 2px var(--white),
+          0 0 0 4px var(--accent);
+      }
+
+      /* Search filtering hides nodes instead of rebuilding the DOM. */
+      .is-hidden {
+        display: none !important;
+      }
+
+      /* ---------------------------------------------------------------
+       * Player
+       * ------------------------------------------------------------- */
+
+      #player-section {
+        margin-top: 24px;
+      }
+
+      #player-shell {
+        background: var(--bg-player-shell);
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      #player-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        background: var(--bg-toolbar);
+        border-bottom: 1px solid var(--border-dark);
+      }
+
+      #player-toolbar h3 {
+        margin: 0;
+        color: var(--white);
+        font-size: 1.1rem;
+      }
+
+      #player-status {
+        margin: 0;
+        color: var(--text-main);
+        font-size: 0.92rem;
+      }
+
+      #player-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      #player-actions button,
+      #player-actions select {
+        cursor: pointer;
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        padding: 0.55rem 0.8rem;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 0.88rem;
+        font-weight: 600;
+        transition:
+          background-color var(--speed) ease,
+          color var(--speed) ease;
+      }
+
+      #player-actions select {
+        background: var(--bg-toolbar);
+      }
+
+      #player-actions button:hover {
+        background: var(--accent);
+        color: var(--button-contrast);
+      }
+
+      #player-actions button:focus-visible,
+      #player-actions select:focus-visible {
+        outline: 2px solid var(--white);
+        outline-offset: 1px;
+      }
+
+      .perf-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      #game-container {
+        width: 100%;
+        height: min(75vh, 900px);
+        min-height: 420px;
+        background: var(--bg-player-shell);
+        position: relative;
+        overflow: hidden;
+        /* Isolates the emulator's repaints from the rest of the page. */
+        contain: layout paint;
+      }
+
+      #game-stage-shell {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: var(--bg-player-shell);
+      }
+
+      #game-stage-viewport {
+        position: relative;
+        overflow: hidden;
+        background: var(--white);
+      }
+
+      #game-stage-viewport > * {
+        width: 100%;
+        height: 100%;
+        display: block;
+        border: 0;
+      }
+
+      /* ---------------------------------------------------------------
+       * Misc
+       * ------------------------------------------------------------- */
+
+      .btn-github {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        border-radius: 100px;
+        font-weight: 800;
+        padding: 0.75rem 1rem;
+        font-size: 0.825rem;
+        line-height: 1rem;
+        background-color: rgba(0, 0, 0, 0.18);
+        color: var(--accent);
+        text-decoration: none;
+        transition:
+          background-color var(--speed) ease,
+          color var(--speed) ease,
+          transform var(--speed) ease;
+      }
+
+      .btn-github:hover {
+        color: var(--white);
+        background-color: rgba(0, 0, 0, 0.32);
+        text-decoration: none;
+        /* transform animates on the compositor, so it stays even on weak
+           hardware — unlike shadow/filter changes, which force a repaint. */
+        transform: translateY(-0.25rem);
+      }
+
+      .center {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .loading-message,
+      .error-message,
+      .empty-message,
+      .notice-message {
+        color: var(--text-muted);
+        padding: 10px 0;
+      }
+
+      .notice-message {
+        color: var(--warn);
+        font-size: 0.86rem;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      /* ---------------------------------------------------------------
+       * Responsive
+       * ------------------------------------------------------------- */
+
+      @media (max-width: 1400px) {
+        :root {
+          --sidebar-width: 270px;
+        }
+
+        .games-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 1100px) {
+        :root {
+          --sidebar-width: 240px;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        h2 {
+          font-size: 1.6rem;
+        }
+
+        .games-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        #game-container {
+          height: 60vh;
+          min-height: 360px;
+        }
+      }
+
+      /* Below this width the sidebar floats over the content instead of
+         squeezing it, so the grid keeps usable column widths. */
+      @media (max-width: 900px) {
+        #main-content {
+          margin-left: 0;
+          padding: 14px 14px 30px;
+        }
+
+        #sidebar {
+          box-shadow: 8px 0 24px rgba(0, 0, 0, 0.5);
+        }
+
+        #container {
+          padding: 14px;
+        }
+
+        .games-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 560px) {
+        :root {
+          --sidebar-width: 230px;
+          --sidebar-toggle-gap: 6px;
+        }
+
+        h1 {
+          font-size: 1.7rem;
+        }
+
+        h2 {
+          font-size: 1.35rem;
+        }
+
+        #main-content {
+          padding: 10px 10px 24px;
+        }
+
+        #container {
+          padding: 10px;
+        }
+
+        .games-grid {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .game-card span {
+          font-size: 0.85rem;
+        }
+
+        #header-controls button {
+          padding: 0.5rem 0.7rem;
+          font-size: 0.78rem;
+        }
+
+        #sidebar-toggle {
+          top: 76px;
+          width: 34px;
+          height: 34px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="header-controls">
+      <button id="lowpower-toggle" type="button" aria-pressed="false">
+        Low Power
+      </button>
+      <button id="theme-toggle" type="button" aria-pressed="false">
+        Miku Mode
+      </button>
+    </div>
+
+    <aside id="sidebar" aria-label="Game list">
+      <h2>Quick Access</h2>
+      <p class="sidebar-subtitle">Jump to any game from here.</p>
+
+      <div id="sidebar-search-wrap">
+        <input
+          id="sidebar-search"
+          type="search"
+          placeholder="Search games..."
+          aria-label="Search games"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div id="search-results-text" aria-live="polite">Loading...</div>
+      </div>
+
+      <div id="sidebar-games">
+        <p class="loading-message">Loading games...</p>
+      </div>
+    </aside>
+
+    <button
+      id="sidebar-toggle"
+      type="button"
+      aria-label="Collapse sidebar"
+      aria-expanded="true"
+      aria-controls="sidebar"
+    >
+      <span aria-hidden="true">&#9664;</span>
+    </button>
+
+    <main id="main-content">
+      <div id="container">
+        <h1>Games Directory</h1>
+
+        <p>
+          Here you can find a collection of retro Flash games that you can play
+          online.
+        </p>
+
+        <h2>Available Games</h2>
+        <div id="gpu-notice"></div>
+        <div id="games-notice"></div>
+        <div class="card" id="games-list">
+          <p class="loading-message">Loading games...</p>
+        </div>
+
+        <section id="player-section" hidden>
+          <h2>Game Player</h2>
+          <div id="player-shell">
+            <div id="player-toolbar">
+              <div>
+                <h3 id="player-title">No game selected</h3>
+                <p id="player-status" aria-live="polite">
+                  Choose a game from the list above.
+                </p>
+              </div>
+              <div id="player-actions">
+                <button id="btn-playpause" type="button">Pause</button>
+                <button id="btn-reload" type="button">Reload</button>
+                <button id="btn-fullscreen" type="button">Fullscreen</button>
+                <button id="btn-close" type="button">Close</button>
+                <span class="perf-group">
+                  <label for="sel-renderer">Renderer</label>
+                  <select id="sel-renderer">
+                    <option value="auto">Auto</option>
+                    <option value="webgl">WebGL</option>
+                    <option value="canvas">Canvas</option>
+                  </select>
+                </span>
+                <span class="perf-group">
+                  <label for="sel-scale">Size</label>
+                  <select id="sel-scale" title="Native draws the game at its own pixel size. Fit stretches it to fill the player, which costs CPU in proportion to the extra pixels.">
+                    <option value="native">Native</option>
+                    <option value="fit">Fit</option>
+                  </select>
+                </span>
+                <span class="perf-group">
+                  <label for="sel-quality">Quality</label>
+                  <select id="sel-quality">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </span>
+                <span class="perf-group">
+                  <label for="sel-framerate">Max FPS</label>
+                  <select id="sel-framerate" title="Caps the emulated frame rate. This slows the GAME down, not just the picture — it is a last resort for titles that are otherwise unplayable.">
+                    <option value="0">Default</option>
+                    <option value="30">30</option>
+                    <option value="24">24</option>
+                    <option value="20">20</option>
+                  </select>
+                </span>
+                <span class="perf-group" id="fps-readout" title="Frames the page itself is managing. Use it to compare settings — higher is better.">
+                  &mdash;
+                </span>
+              </div>
+            </div>
+            <div id="game-container"></div>
+          </div>
+        </section>
+
+        <h2>About the Library</h2>
+        <p>
+          This collection is a fan-made effort to preserve classic web gaming in
+          one place.
+        </p>
+        <p>
+          <strong>Controls:</strong> Flash games use their own input systems
+          through Ruffle. Press <kbd>Esc</kbd> to close the player.
+        </p>
+        <p>
+          <strong>Performance:</strong> The emulator pauses automatically when
+          the tab is hidden or the player is scrolled off screen. If a game runs
+          rough, try switching the renderer between Canvas and WebGL — on
+          machines without a real GPU, Canvas is often faster.
+        </p>
+        <p>
+          <strong>Credits:</strong> All game rights remain with their respective
+          creators and owners.
+        </p>
+
+        <div class="center">
+          <p>
+            <strong>Copyright &copy; <span id="year"></span> @xXblurazXx.</strong>
+          </p>
+        </div>
+
+        <div class="center">
+          <a
+            class="btn-github"
+            href="https://github.com/xxblurazxx/Schmeb"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M7.99992 1.33331C7.12444 1.33331 6.25753 1.50575 5.4487 1.84078C4.63986 2.17581 3.90493 2.66688 3.28587 3.28593C2.03563 4.53618 1.33325 6.23187 1.33325 7.99998C1.33325 10.9466 3.24659 13.4466 5.89325 14.3333C6.22659 14.3866 6.33325 14.18 6.33325 14C6.33325 13.8466 6.33325 13.4266 6.33325 12.8733C4.48659 13.2733 4.09325 11.98 4.09325 11.98C3.78659 11.2066 3.35325 11 3.35325 11C2.74659 10.5866 3.39992 10.6 3.39992 10.6C4.06659 10.6466 4.41992 11.2866 4.41992 11.2866C4.99992 12.3 5.97992 12 6.35992 11.84C6.41992 11.4066 6.59325 11.1133 6.77992 10.9466C5.29992 10.78 3.74659 10.2066 3.74659 7.66665C3.74659 6.92665 3.99992 6.33331 4.43325 5.85998C4.36659 5.69331 4.13325 4.99998 4.49992 4.09998C4.49992 4.09998 5.05992 3.91998 6.33325 4.77998C6.85992 4.63331 7.43325 4.55998 7.99992 4.55998C8.56659 4.55998 9.13992 4.63331 9.66659 4.77998C10.9399 3.91998 11.4999 4.09998 11.4999 4.09998C11.8666 4.99998 11.6333 5.69331 11.5666 5.85998C11.9999 6.33331 12.2533 6.92665 12.2533 7.66665C12.2533 10.2133 10.6933 10.7733 9.20659 10.94C9.44659 11.1466 9.66659 11.5533 9.66659 12.1733C9.66659 13.0666 9.66659 13.7866 9.66659 14C9.66659 14.18 9.77325 14.3933 10.1133 14.3333C12.7599 13.44 14.6666 10.9466 14.6666 7.99998C14.6666 7.1245 14.4941 6.25759 14.1591 5.44876C13.8241 4.63992 13.333 3.90499 12.714 3.28593C12.0949 2.66688 11.36 2.17581 10.5511 1.84078C9.7423 1.50575 8.8754 1.33331 7.99992 1.33331V1.33331Z"
+                fill="currentColor"
+              ></path>
+            </svg>
+            <span>View on Github</span>
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      "use strict";
+
+      /* ==================================================================
+       * CONFIG
+       * ==================================================================
+       * REPO_GAMES_PATH : folder inside the repo that holds the .swf files,
+       *                   used for the GitHub contents API listing.
+       * SWF_BASE_PATH   : path prefix used to actually fetch a .swf, resolved
+       *                   relative to THIS page.
+       *
+       * These two are only the same when index.html lives inside the same
+       * folder as the .swf files. Your original code listed "flash/" but
+       * loaded bare filenames, so index.html must be sitting in flash/ —
+       * SWF_BASE_PATH is left empty to preserve that exact behaviour. If you
+       * ever move index.html to the repo root, set SWF_BASE_PATH = "flash/".
+       * ================================================================ */
+      const REPO_OWNER = "xxblurazxx";
+      const REPO_NAME = "Schmeb";
+      const REPO_GAMES_PATH = "flash";
+      const SWF_BASE_PATH = "";
+
+      // Optional static manifest. If you commit a games.json next to this
+      // page (a JSON array of filenames, or of {name} objects), it is used
+      // instead of the GitHub API — no rate limit, one cached request.
+      const MANIFEST_URL = "games.json";
+
+      /* SELF-HOSTING RUFFLE
+       * Tried in order; the first one that loads wins.
+       *
+       * The npm package behind the unpkg URL has not been republished in a
+       * long time, while Ruffle's own nightly builds have kept going — and
+       * those builds are mostly compatibility and speed fixes. To use a
+       * current one: grab the "Web" build from https://ruffle.rs/downloads,
+       * unzip it into flash/ruffle/ so that flash/ruffle/ruffle.js exists,
+       * and it will be picked up automatically with no edit here. Self-
+       * hosting also removes the CDN round-trip, which matters on a locked
+       * down network. */
+      const RUFFLE_SOURCES = [
+        "ruffle/ruffle.js",
+        "https://unpkg.com/@ruffle-rs/ruffle"
+      ];
+
+      const GAMES_API_URL =
+        "https://api.github.com/repos/" +
+        REPO_OWNER +
+        "/" +
+        REPO_NAME +
+        "/contents/" +
+        REPO_GAMES_PATH;
+
+      const SCALE_STORAGE_KEY = "schmeb-scale";
+      const THEME_STORAGE_KEY = "schmeb-theme";
+      const SIDEBAR_STORAGE_KEY = "schmeb-sidebar-collapsed";
+      const LOWPOWER_STORAGE_KEY = "schmeb-low-power";
+      const RENDERER_STORAGE_KEY = "schmeb-renderer";
+      const QUALITY_STORAGE_KEY = "schmeb-quality";
+      const FRAMERATE_STORAGE_KEY = "schmeb-framerate";
+      const GAMES_CACHE_KEY = "schmeb-games-cache-v1";
+      const GAMES_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+      /* ==================================================================
+       * SAFE STORAGE
+       * Locked-down VDI profiles and private windows can throw on any
+       * localStorage access. The original code called it unguarded, which
+       * would take the whole script down.
+       * ================================================================ */
+      const storage = {
+        get(key) {
+          try {
+            return window.localStorage.getItem(key);
+          } catch (error) {
+            return null;
+          }
+        },
+        set(key, value) {
+          try {
+            window.localStorage.setItem(key, value);
+          } catch (error) {
+            /* quota or access denied — not fatal */
+          }
+        }
+      };
+
+      /* ==================================================================
+       * STATE
+       * ================================================================ */
+      let allGameEntries = [];
+      let currentGame = null;
+      let currentViewportState = null;
+      let currentApi = null;
+      let pausedByUser = false;
+      let pausedByVisibility = false;
+      let currentScaleMode = "native";
+
+      // Cached node lookups so we stop re-querying the whole document.
+      let cardNodesByFile = new Map(); // fileName -> [mainCard, sidebarButton]
+      let gameByFile = new Map(); // fileName -> entry
+      let activeNodes = [];
+      let sectionNodes = []; // { section, sidebarGroup, entries: [{ game, nodes }] }
+
+      const el = {
+        year: document.getElementById("year"),
+        gamesList: document.getElementById("games-list"),
+        gamesNotice: document.getElementById("games-notice"),
+        sidebarGames: document.getElementById("sidebar-games"),
+        search: document.getElementById("sidebar-search"),
+        searchResults: document.getElementById("search-results-text"),
+        playerSection: document.getElementById("player-section"),
+        playerTitle: document.getElementById("player-title"),
+        playerStatus: document.getElementById("player-status"),
+        gameContainer: document.getElementById("game-container"),
+        sidebarToggle: document.getElementById("sidebar-toggle"),
+        themeToggle: document.getElementById("theme-toggle"),
+        lowPowerToggle: document.getElementById("lowpower-toggle"),
+        btnPlayPause: document.getElementById("btn-playpause"),
+        btnReload: document.getElementById("btn-reload"),
+        btnFullscreen: document.getElementById("btn-fullscreen"),
+        btnClose: document.getElementById("btn-close"),
+        selRenderer: document.getElementById("sel-renderer"),
+        selQuality: document.getElementById("sel-quality"),
+        selFramerate: document.getElementById("sel-framerate"),
+        selScale: document.getElementById("sel-scale"),
+        fpsReadout: document.getElementById("fps-readout"),
+        gpuNotice: document.getElementById("gpu-notice")
+      };
+
+      el.year.textContent = String(new Date().getFullYear());
+
+      /* ==================================================================
+       * HELPERS
+       * ================================================================ */
+
+      function toTitleCase(filename) {
+        const nameWithoutExt = filename.replace(/\.[^.]+$/i, "");
+        return (
+          nameWithoutExt
+            .split(/[-_.+%\s]+/)
+            .filter(Boolean)
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ") || nameWithoutExt
+        );
+      }
+
+      function getLetterGroup(name) {
+        const firstChar = (name || "").trim().charAt(0).toUpperCase();
+        return /^[A-Z]$/.test(firstChar) ? firstChar : "#";
+      }
+
+      function groupGamesByLetter(games) {
+        const groups = new Map();
+
+        for (const game of games) {
+          const letter = getLetterGroup(game.displayName);
+          if (!groups.has(letter)) groups.set(letter, []);
+          groups.get(letter).push(game);
+        }
+
+        return [...groups.entries()].sort((a, b) => {
+          if (a[0] === "#") return 1;
+          if (b[0] === "#") return -1;
+          return a[0].localeCompare(b[0]);
+        });
+      }
+
+      function swfUrl(fileName) {
+        // encodeURIComponent keeps filenames with spaces, #, & etc. working.
+        return SWF_BASE_PATH + encodeURIComponent(fileName);
+      }
+
+      function showNotice(message) {
+        el.gamesNotice.innerHTML = "";
+        if (!message) return;
+        const p = document.createElement("p");
+        p.className = "notice-message";
+        p.textContent = message;
+        el.gamesNotice.appendChild(p);
+      }
+
+      /* ==================================================================
+       * SOFTWARE-RENDERING DETECTION
+       * ==================================================================
+       * When Windows has no real display driver the browser reports an
+       * adapter like "Microsoft Basic Render Driver" and every pixel is
+       * rasterised on the CPU. In that case upscaling a 550x400 stage to
+       * fill a 1200px player multiplies the per-frame cost by the ratio of
+       * the areas, so we default to drawing at the movie's native size.
+       * The probe runs once, on a throwaway canvas, and costs nothing.
+       * ================================================================ */
+
+      const SOFTWARE_RENDERER_RE =
+        /swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic|generic renderer|mesa offscreen/i;
+
+      function detectSoftwareRendering() {
+        try {
+          const probe = document.createElement("canvas");
+          const gl =
+            probe.getContext("webgl") || probe.getContext("experimental-webgl");
+          if (!gl) return { software: true, renderer: "no WebGL" };
+
+          const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+          const renderer = String(
+            dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)
+          );
+
+          // Release the context immediately; software contexts are costly
+          // to keep alive.
+          const lose = gl.getExtension("WEBGL_lose_context");
+          if (lose) lose.loseContext();
+
+          return { software: SOFTWARE_RENDERER_RE.test(renderer), renderer };
+        } catch (error) {
+          return { software: false, renderer: "probe failed" };
+        }
+      }
+
+      const gpuInfo = detectSoftwareRendering();
+
+      function showGpuNotice() {
+        if (!gpuInfo.software) return;
+        const p = document.createElement("p");
+        p.className = "notice-message";
+        p.textContent =
+          "No GPU acceleration on this machine (" +
+          gpuInfo.renderer +
+          "), so games are drawn by the CPU. Defaults have been set to Native size and the Canvas renderer, which is the cheapest combination here. The Size and Renderer controls appear once a game is open.";
+        el.gpuNotice.appendChild(p);
+      }
+
+      /* ==================================================================
+       * ACTIVE-STATE TRACKING
+       * The original walked querySelectorAll("[data-file-name]") across the
+       * whole document on every selection. We keep a direct index instead.
+       * ================================================================ */
+
+      function setActiveGameUI(fileName) {
+        for (const node of activeNodes) node.classList.remove("active");
+        activeNodes = cardNodesByFile.get(fileName) || [];
+        for (const node of activeNodes) node.classList.add("active");
+      }
+
+      function clearActiveGameUI() {
+        for (const node of activeNodes) node.classList.remove("active");
+        activeNodes = [];
+      }
+
+      /* ==================================================================
+       * LIST RENDERING
+       * Built once into a DocumentFragment. Searching toggles a class on the
+       * existing nodes rather than tearing down and rebuilding ~2N elements
+       * on every keystroke.
+       * ================================================================ */
+
+      function buildGameList() {
+        const mainFragment = document.createDocumentFragment();
+        const sidebarFragment = document.createDocumentFragment();
+
+        cardNodesByFile = new Map();
+        gameByFile = new Map();
+        sectionNodes = [];
+        activeNodes = [];
+
+        for (const [letter, letterGames] of groupGamesByLetter(allGameEntries)) {
+          const section = document.createElement("section");
+          section.className = "letter-section";
+
+          const divider = document.createElement("div");
+          divider.className = "letter-divider";
+
+          const label = document.createElement("span");
+          label.className = "letter-label";
+          label.textContent = letter;
+          divider.appendChild(label);
+
+          const grid = document.createElement("div");
+          grid.className = "games-grid";
+
+          const sidebarGroup = document.createElement("div");
+          sidebarGroup.className = "sidebar-letter-group";
+
+          const sidebarTitle = document.createElement("div");
+          sidebarTitle.className = "sidebar-letter-title";
+          sidebarTitle.textContent = letter;
+          sidebarGroup.appendChild(sidebarTitle);
+
+          const entries = [];
+
+          for (const game of letterGames) {
+            const card = document.createElement("button");
+            card.type = "button";
+            card.className = "game-card";
+            card.dataset.fileName = game.fileName;
+            card.setAttribute("aria-label", "Play " + game.displayName);
+
+            const span = document.createElement("span");
+            span.textContent = game.displayName;
+            card.appendChild(span);
+            grid.appendChild(card);
+
+            const sideBtn = document.createElement("button");
+            sideBtn.type = "button";
+            sideBtn.className = "sidebar-game-btn";
+            sideBtn.dataset.fileName = game.fileName;
+            sideBtn.textContent = game.displayName;
+            sideBtn.setAttribute("aria-label", "Play " + game.displayName);
+            sidebarGroup.appendChild(sideBtn);
+
+            const nodes = [card, sideBtn];
+            cardNodesByFile.set(game.fileName, nodes);
+            gameByFile.set(game.fileName, game);
+            entries.push({ game, nodes });
+          }
+
+          section.appendChild(divider);
+          section.appendChild(grid);
+          mainFragment.appendChild(section);
+          sidebarFragment.appendChild(sidebarGroup);
+
+          sectionNodes.push({ section, sidebarGroup, entries });
+        }
+
+        el.gamesList.replaceChildren(mainFragment);
+        el.sidebarGames.replaceChildren(sidebarFragment);
+
+        if (!allGameEntries.length) {
+          el.gamesList.innerHTML =
+            '<p class="empty-message">No games found.</p>';
+          el.sidebarGames.innerHTML =
+            '<p class="empty-message">No games found.</p>';
+        }
+
+        if (currentGame) setActiveGameUI(currentGame.fileName);
+      }
+
+      function applyFilter(rawTerm) {
+        const term = rawTerm.trim().toLowerCase();
+        let shown = 0;
+
+        for (const { section, sidebarGroup, entries } of sectionNodes) {
+          let visibleInSection = 0;
+
+          for (const { game, nodes } of entries) {
+            const match =
+              !term ||
+              game.searchKey.includes(term);
+
+            if (match) visibleInSection++;
+
+            for (const node of nodes) {
+              node.classList.toggle("is-hidden", !match);
+            }
+          }
+
+          shown += visibleInSection;
+          const sectionEmpty = visibleInSection === 0;
+          section.classList.toggle("is-hidden", sectionEmpty);
+          sidebarGroup.classList.toggle("is-hidden", sectionEmpty);
+        }
+
+        updateSearchResultsText(allGameEntries.length, shown, term);
+      }
+
+      function updateSearchResultsText(total, shown, term) {
+        if (!term) {
+          el.searchResults.textContent = "Showing all games (" + total + ")";
+          return;
+        }
+        el.searchResults.textContent =
+          "Showing " + shown + " of " + total + " games";
+      }
+
+      /* ==================================================================
+       * RUFFLE READINESS
+       * The Ruffle script is deferred, so it may not be parsed yet when the
+       * first game is clicked on a slow connection.
+       * ================================================================ */
+
+      let rufflePromise = null;
+      let ruffleSourceUsed = null;
+
+      function injectScript(src) {
+        return new Promise((resolve, reject) => {
+          const tag = document.createElement("script");
+          tag.src = src;
+          tag.async = true;
+          tag.onload = () => resolve();
+          tag.onerror = () => reject(new Error("failed to load " + src));
+          document.head.appendChild(tag);
+        });
+      }
+
+      // Ruffle installs window.RufflePlayer.newest() a moment after its
+      // script evaluates, so onload alone is not proof that it is usable.
+      function waitForRuffleApi(timeoutMs) {
+        return new Promise((resolve) => {
+          const deadline = Date.now() + timeoutMs;
+          const tick = () => {
+            if (window.RufflePlayer && window.RufflePlayer.newest) resolve(true);
+            else if (Date.now() > deadline) resolve(false);
+            else window.setTimeout(tick, 50);
+          };
+          tick();
+        });
+      }
+
+      function loadRuffle() {
+        if (rufflePromise) return rufflePromise;
+
+        rufflePromise = (async () => {
+          for (const src of RUFFLE_SOURCES) {
+            try {
+              await injectScript(src);
+              if (await waitForRuffleApi(8000)) {
+                ruffleSourceUsed = src;
+                return true;
+              }
+            } catch (error) {
+              /* try the next source */
+            }
+          }
+          return false;
+        })();
+
+        return rufflePromise;
+      }
+
+      function whenRuffleReady() {
+        if (window.RufflePlayer && window.RufflePlayer.newest) {
+          return Promise.resolve(true);
+        }
+        return loadRuffle();
+      }
+
+      /* FPS meter. Only runs while a game is actually loaded and on screen,
+       * so it costs nothing the rest of the time. This measures the page's
+       * frame rate rather than Ruffle's internal one — it is for comparing
+       * settings against each other, not an absolute figure. */
+      let fpsRafId = null;
+
+      function startFpsMeter() {
+        if (fpsRafId !== null) return;
+
+        let frames = 0;
+        let last = performance.now();
+
+        const tick = (now) => {
+          frames++;
+          if (now - last >= 1000) {
+            const fps = (frames * 1000) / (now - last);
+            el.fpsReadout.textContent = fps.toFixed(0) + " fps";
+            frames = 0;
+            last = now;
+          }
+          fpsRafId = requestAnimationFrame(tick);
+        };
+
+        fpsRafId = requestAnimationFrame(tick);
+      }
+
+      function stopFpsMeter() {
+        if (fpsRafId !== null) cancelAnimationFrame(fpsRafId);
+        fpsRafId = null;
+        el.fpsReadout.innerHTML = "&mdash;";
+      }
+
+      /* ==================================================================
+       * VIEWPORT (aspect-ratio fitting)
+       * ================================================================ */
+
+      function createGameViewport() {
+        const shell = document.createElement("div");
+        shell.id = "game-stage-shell";
+
+        const viewport = document.createElement("div");
+        viewport.id = "game-stage-viewport";
+        viewport.style.visibility = "hidden";
+
+        shell.appendChild(viewport);
+        el.gameContainer.appendChild(shell);
+
+        let stageWidth = 4;
+        let stageHeight = 3;
+        let rafId = null;
+        let lastW = -1;
+        let lastH = -1;
+
+        const updateViewportSize = () => {
+          if (rafId !== null) cancelAnimationFrame(rafId);
+
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+
+            const containerWidth = shell.clientWidth;
+            const containerHeight = shell.clientHeight;
+            if (!containerWidth || !containerHeight) return;
+
+            // Largest scale that still fits the shell...
+            let scale = Math.min(
+              containerWidth / stageWidth,
+              containerHeight / stageHeight
+            );
+
+            // ...but in native mode never magnify past 1:1. Ruffle's canvas
+            // is sized from this element, so clamping it here is what
+            // actually reduces the number of pixels rasterised per frame.
+            if (currentScaleMode === "native") scale = Math.min(scale, 1);
+
+            const w = Math.round(stageWidth * scale);
+            const h = Math.round(stageHeight * scale);
+
+            // Skip the style write when nothing actually changed; otherwise
+            // every resize tick forces a fresh layout of the emulator canvas.
+            if (w === lastW && h === lastH) return;
+            lastW = w;
+            lastH = h;
+
+            viewport.style.width = w + "px";
+            viewport.style.height = h + "px";
+          });
+        };
+
+        const setStageSize = (width, height) => {
+          if (
+            Number.isFinite(width) &&
+            Number.isFinite(height) &&
+            width > 0 &&
+            height > 0
+          ) {
+            stageWidth = width;
+            stageHeight = height;
+          }
+          updateViewportSize();
+          viewport.style.visibility = "visible";
+        };
+
+        const resizeObserver = new ResizeObserver(updateViewportSize);
+        resizeObserver.observe(shell);
+
+        updateViewportSize();
+
+        return {
+          viewport,
+          setStageSize,
+          // Re-fits without reloading the movie, so changing Size is instant.
+          refresh: updateViewportSize,
+          cleanup() {
+            resizeObserver.disconnect();
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+        };
+      }
+
+      /* ==================================================================
+       * METADATA WAIT
+       * The original spun on requestAnimationFrame for up to 10 seconds,
+       * burning a callback every frame. This listens for the event and polls
+       * on a cheap 80 ms timer as a fallback.
+       * ================================================================ */
+
+      function waitForMovieMetadata(player, api, timeoutMs) {
+        const isReady = () => {
+          const metadata = api.metadata;
+          return (
+            api.readyState >= 1 &&
+            metadata &&
+            Number.isFinite(metadata.width) &&
+            Number.isFinite(metadata.height) &&
+            metadata.width > 0 &&
+            metadata.height > 0
+          );
+        };
+
+        if (isReady()) return Promise.resolve(api.metadata);
+
+        return new Promise((resolve) => {
+          let timerId = null;
+          let settled = false;
+
+          const finish = (value) => {
+            if (settled) return;
+            settled = true;
+            if (timerId !== null) clearTimeout(timerId);
+            player.removeEventListener("loadedmetadata", onMeta);
+            resolve(value);
+          };
+
+          function onMeta() {
+            if (isReady()) finish(api.metadata);
+          }
+
+          player.addEventListener("loadedmetadata", onMeta);
+
+          const deadline = Date.now() + timeoutMs;
+          const poll = () => {
+            if (settled) return;
+            if (isReady()) return finish(api.metadata);
+            if (Date.now() > deadline) return finish(null);
+            timerId = window.setTimeout(poll, 80);
+          };
+          poll();
+        });
+      }
+
+      /* ==================================================================
+       * PLAYER LIFECYCLE
+       * ================================================================ */
+
+      function clearPlayer() {
+        // Stop the emulator before detaching so no frames are processed
+        // while the element is being torn down.
+        if (currentApi) {
+          try {
+            if (typeof currentApi.pause === "function") currentApi.pause();
+          } catch (error) {
+            /* ignore */
+          }
+        }
+        currentApi = null;
+
+        if (currentViewportState) {
+          currentViewportState.cleanup();
+          currentViewportState = null;
+        }
+
+        el.gameContainer.replaceChildren();
+        stopFpsMeter();
+        pausedByUser = false;
+        pausedByVisibility = false;
+        updatePlayPauseLabel();
+      }
+
+      async function loadGame(fileName, displayName) {
+        el.playerSection.hidden = false;
+        el.playerTitle.textContent = displayName;
+        el.playerStatus.textContent = "Loading " + displayName + "...";
+
+        clearPlayer();
+
+        currentGame = { fileName, displayName };
+        setActiveGameUI(fileName);
+
+        try {
+          await loadFlashGame(fileName, displayName);
+          el.playerSection.scrollIntoView({
+            behavior: document.documentElement.classList.contains("low-power")
+              ? "auto"
+              : "smooth",
+            block: "start"
+          });
+        } catch (error) {
+          console.error(error);
+          el.playerStatus.textContent = "Failed to load " + displayName + ".";
+        }
+      }
+
+      async function loadFlashGame(fileName, displayName) {
+        const ready = await whenRuffleReady();
+        if (!ready) {
+          el.playerStatus.textContent =
+            "Ruffle could not be loaded from " +
+            RUFFLE_SOURCES.join(" or ") +
+            ". Check your connection or any content blockers, then press Reload.";
+          return;
+        }
+
+        const viewportState = createGameViewport();
+        currentViewportState = viewportState;
+
+        const ruffle = window.RufflePlayer.newest();
+        const player = ruffle.createPlayer();
+
+        player.style.width = "100%";
+        player.style.height = "100%";
+        player.style.display = "block";
+
+        viewportState.viewport.appendChild(player);
+
+        const api = player.ruffle();
+        currentApi = api;
+
+        await api.load(swfUrl(fileName));
+
+        const metadata = await waitForMovieMetadata(player, api, 10000);
+        const movieBg = (metadata && metadata.backgroundColor) || "#ffffff";
+
+        viewportState.viewport.style.backgroundColor = movieBg;
+        player.style.backgroundColor = movieBg;
+
+        const localRuffle =
+          ruffleSourceUsed && !/^https?:/i.test(ruffleSourceUsed)
+            ? " • local ruffle"
+            : "";
+
+        if (metadata) {
+          viewportState.setStageSize(metadata.width, metadata.height);
+          el.playerStatus.textContent =
+            "Now playing: " +
+            displayName +
+            " • " +
+            metadata.width +
+            "×" +
+            metadata.height +
+            localRuffle;
+        } else {
+          viewportState.setStageSize(4, 3);
+          el.playerStatus.textContent =
+            "Now playing: " + displayName + " • fallback viewport" + localRuffle;
+        }
+
+        pausedByUser = false;
+        pausedByVisibility = false;
+        updatePlayPauseLabel();
+        startFpsMeter();
+
+        // A game loaded while the tab is in the background should not start
+        // chewing CPU before the user comes back.
+        if (document.hidden) pauseForVisibility();
+      }
+
+      function reloadCurrentGame() {
+        // This function was referenced by the Reload button in the original
+        // markup but never defined — clicking Reload threw a ReferenceError.
+        if (!currentGame) return;
+        loadGame(currentGame.fileName, currentGame.displayName);
+      }
+
+      function closePlayer() {
+        clearPlayer();
+        el.playerSection.hidden = true;
+        el.playerTitle.textContent = "No game selected";
+        el.playerStatus.textContent = "Choose a game from the list above.";
+        currentGame = null;
+        clearActiveGameUI();
+      }
+
+      /* ==================================================================
+       * PAUSE / RESUME
+       * ================================================================ */
+
+      function apiPause() {
+        if (!currentApi || typeof currentApi.pause !== "function") return false;
+        try {
+          currentApi.pause();
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function apiPlay() {
+        if (!currentApi || typeof currentApi.play !== "function") return false;
+        try {
+          currentApi.play();
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function updatePlayPauseLabel() {
+        el.btnPlayPause.textContent = pausedByUser ? "Resume" : "Pause";
+      }
+
+      function togglePlayPause() {
+        if (!currentApi) return;
+        if (pausedByUser) {
+          pausedByUser = false;
+          if (!pausedByVisibility) {
+            apiPlay();
+            startFpsMeter();
+          }
+        } else {
+          pausedByUser = true;
+          apiPause();
+          stopFpsMeter();
+        }
+        updatePlayPauseLabel();
+      }
+
+      function pauseForVisibility() {
+        if (!currentApi || pausedByVisibility) return;
+        pausedByVisibility = true;
+        apiPause();
+        stopFpsMeter();
+      }
+
+      function resumeFromVisibility() {
+        if (!currentApi || !pausedByVisibility) return;
+        pausedByVisibility = false;
+        if (!pausedByUser) {
+          apiPlay();
+          startFpsMeter();
+        }
+      }
+
+      function toggleFullscreen() {
+        if (currentApi && typeof currentApi.setFullscreen === "function") {
+          try {
+            currentApi.setFullscreen(true);
+            return;
+          } catch (error) {
+            /* fall through to the DOM API */
+          }
+        }
+        const shell = document.getElementById("player-shell");
+        if (shell && shell.requestFullscreen) {
+          shell.requestFullscreen().catch(() => {});
+        }
+      }
+
+      /* ==================================================================
+       * GAME LIST LOADING  (manifest -> GitHub API -> cache)
+       * ==================================================================
+       * The original hit the unauthenticated GitHub contents API on every
+       * single page load. That endpoint allows 60 requests per hour per IP,
+       * and a VDI shares one outbound IP with everyone else on it — so the
+       * list silently stops loading. Now: render from cache instantly, then
+       * revalidate in the background at most once every 6 hours.
+       * ================================================================ */
+
+      function normalizeEntries(names) {
+        return names
+          .filter((name) => /\.swf$/i.test(name))
+          .map((name) => {
+            const displayName = toTitleCase(decodeURIComponent(name));
+            return {
+              fileName: name,
+              displayName,
+              searchKey: (displayName + " " + name).toLowerCase()
+            };
+          })
+          .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      }
+
+      function readCache() {
+        const raw = storage.get(GAMES_CACHE_KEY);
+        if (!raw) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          if (!parsed || !Array.isArray(parsed.names)) return null;
+          return parsed;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function writeCache(names) {
+        storage.set(
+          GAMES_CACHE_KEY,
+          JSON.stringify({ names, savedAt: Date.now() })
+        );
+      }
+
+      async function fetchNamesFromManifest() {
+        const response = await fetch(MANIFEST_URL, { cache: "no-cache" });
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (!Array.isArray(data)) return null;
+
+        return data
+          .map((item) => (typeof item === "string" ? item : item && item.name))
+          .filter((name) => typeof name === "string");
+      }
+
+      async function fetchNamesFromGitHub() {
+        const response = await fetch(GAMES_API_URL, {
+          headers: { Accept: "application/vnd.github+json" }
+        });
+
+        if (response.status === 403 || response.status === 429) {
+          const error = new Error("rate-limited");
+          error.code = "rate-limited";
+          throw error;
+        }
+        if (!response.ok) {
+          throw new Error("GitHub API returned " + response.status);
+        }
+
+        const files = await response.json();
+        if (!Array.isArray(files)) throw new Error("Unexpected API response");
+
+        return files
+          .filter((file) => file && file.type === "file")
+          .map((file) => file.name);
+      }
+
+      async function fetchNames() {
+        try {
+          const manifestNames = await fetchNamesFromManifest();
+          if (manifestNames && manifestNames.length) return manifestNames;
+        } catch (error) {
+          /* no manifest committed — fall through to the API */
+        }
+        return fetchNamesFromGitHub();
+      }
+
+      function renderNames(names) {
+        allGameEntries = normalizeEntries(names);
+        buildGameList();
+        applyFilter(el.search.value || "");
+      }
+
+      async function loadGamesList() {
+        const cached = readCache();
+        const cacheIsFresh =
+          cached && Date.now() - cached.savedAt < GAMES_CACHE_TTL_MS;
+
+        if (cached) {
+          renderNames(cached.names);
+          if (cacheIsFresh) return; // nothing else to do, zero network calls
+        }
+
+        try {
+          const names = await fetchNames();
+          const changed =
+            !cached || cached.names.join("|") !== names.join("|");
+
+          writeCache(names);
+          if (changed) renderNames(names);
+          showNotice("");
+        } catch (error) {
+          console.error(error);
+
+          if (cached) {
+            showNotice(
+              error.code === "rate-limited"
+                ? "GitHub's API rate limit was hit, so this list is from cache. It will refresh automatically later."
+                : "Could not refresh the game list, showing the cached copy."
+            );
+            return;
+          }
+
+          const message =
+            error.code === "rate-limited"
+              ? "GitHub's hourly API limit was hit for this network. Try again later, or commit a games.json manifest to skip the API entirely."
+              : "Error loading games.";
+
+          el.gamesList.innerHTML =
+            '<p class="error-message">' + message + "</p>";
+          el.sidebarGames.innerHTML =
+            '<p class="error-message">Error loading games.</p>';
+          el.searchResults.textContent = "Could not load games";
+        }
+      }
+
+      /* ==================================================================
+       * EVENT WIRING
+       * One delegated listener per container instead of two listeners per
+       * game. With a few hundred games that is hundreds of closures saved.
+       * ================================================================ */
+
+      function onListClick(event) {
+        const target = event.target.closest("[data-file-name]");
+        if (!target) return;
+        const entry = gameByFile.get(target.dataset.fileName);
+        if (entry) loadGame(entry.fileName, entry.displayName);
+      }
+
+      function setupSearch() {
+        let debounceId = null;
+
+        el.search.addEventListener("input", (event) => {
+          const value = event.target.value;
+          if (debounceId !== null) clearTimeout(debounceId);
+          // Filtering touches every card, so coalesce fast typing.
+          debounceId = window.setTimeout(() => {
+            debounceId = null;
+            applyFilter(value);
+          }, 120);
+        });
+      }
+
+      function updateSidebarToggleState(collapsed) {
+        el.sidebarToggle.firstElementChild.textContent = collapsed
+          ? "▶"
+          : "◀";
+        el.sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+        el.sidebarToggle.setAttribute(
+          "aria-label",
+          collapsed ? "Expand sidebar" : "Collapse sidebar"
+        );
+      }
+
+      function setupSidebarToggle() {
+        const collapsed = storage.get(SIDEBAR_STORAGE_KEY) === "collapsed";
+        document.body.classList.toggle("sidebar-collapsed", collapsed);
+        updateSidebarToggleState(collapsed);
+
+        el.sidebarToggle.addEventListener("click", () => {
+          const isCollapsed =
+            document.body.classList.toggle("sidebar-collapsed");
+          updateSidebarToggleState(isCollapsed);
+          storage.set(
+            SIDEBAR_STORAGE_KEY,
+            isCollapsed ? "collapsed" : "expanded"
+          );
+        });
+      }
+
+      function applyTheme(theme) {
+        const isTeto = theme === "teto";
+        document.documentElement.classList.toggle("teto-mode", isTeto);
+        el.themeToggle.textContent = isTeto ? "Teto Mode" : "Miku Mode";
+        el.themeToggle.setAttribute("aria-pressed", String(isTeto));
+        storage.set(THEME_STORAGE_KEY, isTeto ? "teto" : "miku");
+      }
+
+      function setupThemeToggle() {
+        applyTheme(storage.get(THEME_STORAGE_KEY) === "teto" ? "teto" : "miku");
+
+        el.themeToggle.addEventListener("click", () => {
+          const isTeto =
+            document.documentElement.classList.contains("teto-mode");
+          applyTheme(isTeto ? "miku" : "teto");
+        });
+      }
+
+      function applyLowPower(enabled) {
+        document.documentElement.classList.toggle("low-power", enabled);
+        el.lowPowerToggle.setAttribute("aria-pressed", String(enabled));
+        storage.set(LOWPOWER_STORAGE_KEY, enabled ? "on" : "off");
+      }
+
+      function setupLowPowerToggle() {
+        applyLowPower(storage.get(LOWPOWER_STORAGE_KEY) === "on");
+
+        el.lowPowerToggle.addEventListener("click", () => {
+          applyLowPower(
+            !document.documentElement.classList.contains("low-power")
+          );
+        });
+      }
+
+      /* RENDERER NOTE
+       * Ruffle picks WebGPU > WebGL > Canvas by default. In a VDI there is
+       * usually no GPU, so "WebGL" is really a software rasteriser running
+       * on the same two vCPUs as everything else — and Canvas can win.
+       * Neither is universally faster, so this is a switch, not a default.
+       * Changing it reloads the current game because Ruffle reads the
+       * config when a movie is loaded. */
+      function applyRendererSetting(value, reload) {
+        if (value === "auto") {
+          delete window.RufflePlayer.config.preferredRenderer;
+        } else {
+          window.RufflePlayer.config.preferredRenderer = value;
+        }
+        storage.set(RENDERER_STORAGE_KEY, value);
+        if (reload) reloadCurrentGame();
+      }
+
+      function applyQualitySetting(value, reload) {
+        window.RufflePlayer.config.quality = value;
+        storage.set(QUALITY_STORAGE_KEY, value);
+        if (reload) reloadCurrentGame();
+      }
+
+      /* Capping the frame rate cuts CPU roughly in proportion, but Flash
+       * game logic is tied to frames, so the game genuinely runs slower —
+       * this is not just a smoothness setting. Worth it only for titles
+       * that are unplayable otherwise. */
+      function applyFramerateSetting(value, reload) {
+        const fps = Number(value);
+        if (fps > 0) window.RufflePlayer.config.frameRate = fps;
+        else delete window.RufflePlayer.config.frameRate;
+        storage.set(FRAMERATE_STORAGE_KEY, String(value));
+        if (reload) reloadCurrentGame();
+      }
+
+      // Changing size does not touch Ruffle's config, so there is no need to
+      // reload the movie — just re-fit the element it draws into.
+      function applyScaleSetting(value) {
+        currentScaleMode = value === "fit" ? "fit" : "native";
+        storage.set(SCALE_STORAGE_KEY, currentScaleMode);
+        if (currentViewportState) currentViewportState.refresh();
+      }
+
+      function setupPerformanceControls() {
+        /* With no GPU, ANGLE is translating WebGL to D3D11 and running it on
+         * a software rasteriser — two translation layers on the CPU. Ruffle's
+         * Canvas backend goes through the browser's own CPU rasteriser
+         * instead, which is usually the cheaper of the two. So when there is
+         * no GPU and the user has expressed no preference, start on Canvas
+         * and at native size rather than Auto and stretched. */
+        const savedRenderer =
+          storage.get(RENDERER_STORAGE_KEY) ||
+          (gpuInfo.software ? "canvas" : "auto");
+        const savedQuality = storage.get(QUALITY_STORAGE_KEY) || "low";
+        const savedFramerate = storage.get(FRAMERATE_STORAGE_KEY) || "0";
+        const savedScale =
+          storage.get(SCALE_STORAGE_KEY) || (gpuInfo.software ? "native" : "fit");
+
+        el.selRenderer.value = savedRenderer;
+        el.selQuality.value = savedQuality;
+        el.selFramerate.value = savedFramerate;
+        el.selScale.value = savedScale;
+
+        applyRendererSetting(savedRenderer, false);
+        applyQualitySetting(savedQuality, false);
+        applyFramerateSetting(savedFramerate, false);
+        applyScaleSetting(savedScale);
+
+        el.selScale.addEventListener("change", (event) => {
+          applyScaleSetting(event.target.value);
+        });
+
+        el.selRenderer.addEventListener("change", (event) => {
+          applyRendererSetting(event.target.value, true);
+        });
+        el.selQuality.addEventListener("change", (event) => {
+          applyQualitySetting(event.target.value, true);
+        });
+        el.selFramerate.addEventListener("change", (event) => {
+          applyFramerateSetting(event.target.value, true);
+        });
+      }
+
+      function setupPlayerControls() {
+        el.btnPlayPause.addEventListener("click", togglePlayPause);
+        el.btnReload.addEventListener("click", reloadCurrentGame);
+        el.btnFullscreen.addEventListener("click", toggleFullscreen);
+        el.btnClose.addEventListener("click", closePlayer);
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && !el.playerSection.hidden) {
+            closePlayer();
+          }
+        });
+      }
+
+      /* Auto-pause: hidden tab, or player scrolled off screen.
+       * Browsers throttle requestAnimationFrame in a hidden tab, but an
+       * emulator that is merely scrolled out of view in a visible tab keeps
+       * running at full speed — which is exactly the case that hurts here. */
+      function setupAutoPause() {
+        let isPlayerOnScreen = true;
+
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            pauseForVisibility();
+          } else if (isPlayerOnScreen) {
+            resumeFromVisibility();
+          }
+        });
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              isPlayerOnScreen = entry.isIntersecting;
+              if (!entry.isIntersecting) {
+                pauseForVisibility();
+              } else if (!document.hidden) {
+                resumeFromVisibility();
+              }
+            }
+          },
+          { threshold: 0.05 }
+        );
+
+        observer.observe(el.gameContainer);
+      }
+
+      /* ==================================================================
+       * INIT
+       * ================================================================ */
+
+      el.gamesList.addEventListener("click", onListClick);
+      el.sidebarGames.addEventListener("click", onListClick);
+
+      setupSearch();
+      setupSidebarToggle();
+      setupThemeToggle();
+      setupLowPowerToggle();
+      setupPerformanceControls();
+      setupPlayerControls();
+      setupAutoPause();
+      showGpuNotice();
+      loadGamesList();
+
+      // Warm Ruffle up in the background so the first click isn't waiting on
+      // a cold fetch. Nothing blocks on this.
+      loadRuffle();
+    </script>
+  </body>
+</html>
